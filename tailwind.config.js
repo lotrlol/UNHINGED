@@ -1,6 +1,9 @@
-/** @type {import('tailwindcss').Config} */
-const defaultTheme = require('tailwindcss/defaultTheme')
+import forms from '@tailwindcss/forms';
+import typography from '@tailwindcss/typography';
+import aspectRatio from '@tailwindcss/aspect-ratio';
+import { fontFamily } from 'tailwindcss/defaultTheme';
 
+/** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   darkMode: 'class',
@@ -48,8 +51,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter var', ...defaultTheme.fontFamily.sans],
-        display: ['CalSans', ...defaultTheme.fontFamily.sans],
+        sans: ['Inter var', ...fontFamily.sans],
+        display: ['CalSans', ...fontFamily.sans],
       },
       spacing: {
         '18': '4.5rem',
@@ -99,8 +102,8 @@ export default {
     },
   },
   plugins: [
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/typography'),
-    require('@tailwindcss/aspect-ratio')
+    forms,
+    typography,
+    aspectRatio
   ],
 };

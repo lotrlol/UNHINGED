@@ -7,8 +7,7 @@ export default defineConfig({
   optimizeDeps: {
     include: [
       'framer-motion',
-      '@tailwindcss/forms',
-      'react-intersection-observer'
+      '@tailwindcss/forms'
     ],
     exclude: ['lucide-react'],
   },
