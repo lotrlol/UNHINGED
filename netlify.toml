@@ -1,11 +1,11 @@
 [build]
   command = "npm run build"
   publish = "dist"
-  environment = { NODE_VERSION = "18", NODE_ENV = "production" }
-
-# Tell Netlify to ignore these specific keys in secrets scanning
-[build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_ANON_KEY,VITE_SUPABASE_URL"
+  environment = { 
+    NODE_VERSION = "18", 
+    NODE_ENV = "production",
+    SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_ANON_KEY,VITE_SUPABASE_URL"
+  }
 
 # Add headers for security and caching
 [[headers]]
