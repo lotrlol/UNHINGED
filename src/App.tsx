@@ -43,9 +43,14 @@ const App: React.FC<AppProps> = () => {
   const [activeTab, setActiveTab] = useState<Tab>('collabs')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [mounted, setMounted] = useState(false)
   const { user, loading: authLoading } = useAuth()
   const { profile, loading: profileLoading } = useProfile()
-  const [mounted, setMounted] = useState(false)
+  const [ref, inView] = useInView({
+    threshold: 0.1,
+    triggerOnce: true
+  });
 
   useEffect(() => {
     setMounted(true)
@@ -70,6 +75,10 @@ const App: React.FC<AppProps> = () => {
     setShowOnboarding(false)
   }
 
+  const handleAuthModeChange = (mode: 'signin' | 'signup') => {
+    setAuthMode(mode);
+  };
+
   // Loading state with glass effect
   if (authLoading || !mounted) {
     return (
@@ -86,12 +95,6 @@ const App: React.FC<AppProps> = () => {
       </div>
     );
   }
-
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-
-  const handleAuthModeChange = (mode: 'signin' | 'signup') => {
-    setAuthMode(mode);
-  };
 
   // Auth state with glass effect
   if (!user) {
@@ -178,11 +181,6 @@ const App: React.FC<AppProps> = () => {
   }
 
   // Main app layout with glass effect
-  const [ref, inView] = useInView({
-    threshold: 0.1,
-    triggerOnce: true
-  });
-
   const ActiveTab = tabComponents[activeTab as TabKey];
 
   return (
