@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "imports": {
+    "framer-motion": "./node_modules/framer-motion/dist/es/index.js",
+    "@tailwindcss/forms": "./node_modules/@tailwindcss/forms/dist/index.js"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
