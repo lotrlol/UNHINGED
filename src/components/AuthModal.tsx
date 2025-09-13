@@ -8,9 +8,10 @@ interface AuthModalProps {
   onClose: () => void
   mode: 'signin' | 'signup'
   onModeChange: (mode: 'signin' | 'signup') => void
+  onSuccess?: () => void
 }
 
-export function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthModalProps) {
+export function AuthModal({ isOpen, onClose, mode, onModeChange, onSuccess }: AuthModalProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -44,6 +45,7 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthModalProp
           setSuccess('Account created successfully!')
           setTimeout(() => {
             onClose()
+            if (onSuccess) onSuccess()
           }, 1500)
         }
       } else {
@@ -56,6 +58,7 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthModalProp
           setSuccess('Welcome back!')
           setTimeout(() => {
             onClose()
+            if (onSuccess) onSuccess()
           }, 1000)
         }
       }
