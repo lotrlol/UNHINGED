@@ -43,7 +43,7 @@ export function ProfileTab() {
     loading: contentLoading, 
     error: contentError,
     refetch: refetchContent 
-  } = useContent({ creator_id: user?.id });
+  } = useContent(user?.id ? { creator_id: user.id } : undefined);
 
   const getContentIcon = (type: string) => {
     switch (type) {
