@@ -511,6 +511,10 @@ export function ProfileTab() {
                   const isSelected = selectedContentId === item.id;
                   const thumbnailUrl = item.content_type === 'video' ? getVideoThumbnail(item) : item.thumbnail_url;
                   
+                  const isSelected = selectedContentId === item.id;
+                  const thumbnailUrl = item.content_type === 'video' ? getVideoThumbnail(item) : item.thumbnail_url;
+                  
+                  return (
               /* List View */
               <div className="space-y-4">
                 {userContent.map((item, index) => (
@@ -643,6 +647,8 @@ export function ProfileTab() {
                             <div className="flex items-center gap-1">
                               <Eye className="w-3 h-3" />
                               <span>{item.view_count}</span>
+                  );
+                })}
                             </div>
                             <span>{formatDate(item.created_at)}</span>
                           </div>
