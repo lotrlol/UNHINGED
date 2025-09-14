@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings,
   MapPin,
@@ -10,19 +10,59 @@ import {
   MessageCircle,
   Users,
   LogOut,
+  Grid3X3,
+  List,
+  Play,
+  Heart,
+  Eye,
+  MoreHorizontal,
+  Plus,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GlassCard } from './ui/GlassCard';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { useProfile } from '../hooks/useProfile';
-    import { useAuth } from '../hooks/useAuth';
-    import { getInitials } from '../lib/utils';
-    import { CardContent } from './ui/Card';
+import { useAuth } from '../hooks/useAuth';
+import { useContent } from '../hooks/useContent';
+import { getInitials, formatDate } from '../lib/utils';
+import { CardContent } from './ui/Card';
+import { CreateContentModal } from './CreateContentModal';
+
+type ViewMode = 'grid' | 'list';
 
 export function ProfileTab() {
   const { profile, loading, error } = useProfile();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  
+  // Fetch user's content
+  const { 
+    content: userContent, 
+    loading: contentLoading, 
+    error: contentError,
+    refetch: refetchContent 
+  } = useContent({ creator_id: user?.id });
+
+  const getContentIcon = (type: string) => {
+    switch (type) {
+      case 'video': return '🎥';
+      case 'audio': return '🎧';
+      case 'image': return '📸';
+      case 'article': return '📝';
+      default: return '📄';
+    }
+  };
+
+  const handleCreateContent = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleContentCreated = () => {
+    setShowCreateModal(false);
+    refetchContent();
+  };
 
   if (loading) {
     return (
@@ -112,7 +152,7 @@ export function ProfileTab() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative mb-24"
+        className="relative mb-8"
       >
         <GlassCard className="relative overflow-hidden p-0 backdrop-blur-lg border border-white/10 bg-white/5">
           {/* Banner Image with Overlay */}
@@ -294,11 +334,226 @@ export function ProfileTab() {
         </GlassCard>
       </motion.div>
 
-      {/* Quick Actions */}
+      {/* Content Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.1 }}
+        className="mb-8"
+      >
+        <GlassCard className="overflow-hidden">
+          {/* Content Header */}
+          <div className="p-6 border-b border-white/10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">My Content</h3>
+              <div className="flex items-center gap-3">
+                {/* View Mode Toggle */}
+                <div className="flex bg-black/40 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded-md transition-all ${
+                      viewMode === 'grid'
+                        ? 'bg-purple-600/50 text-white'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded-md transition-all ${
+                      viewMode === 'list'
+                        ? 'bg-purple-600/50 text-white'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                {/* Create Content Button */}
+                <Button
+                  onClick={handleCreateContent}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create
+                </Button>
+              </div>
+            </div>
+
+            {/* Content Stats */}
+            <div className="flex items-center gap-6 text-sm text-gray-300">
+              <span>{userContent?.length || 0} posts</span>
+              <span>{userContent?.reduce((sum, item) => sum + (item.view_count || 0), 0) || 0} total views</span>
+              <span>{userContent?.reduce((sum, item) => sum + (item.like_count || 0), 0) || 0} total likes</span>
+            </div>
+          </div>
+
+          {/* Content Grid/List */}
+          <div className="p-6">
+            {contentLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : contentError ? (
+              <div className="text-center py-12">
+                <div className="text-4xl mb-4">⚠️</div>
+                <p className="text-red-400 mb-4">Error loading content</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchContent()}
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : !userContent || userContent.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="text-6xl mb-6">🎨</div>
+                <h4 className="text-xl font-semibold text-white mb-3">
+                  No content yet
+                </h4>
+                <p className="text-gray-300 mb-6 max-w-md mx-auto">
+                  Start sharing your creative work to build your portfolio and attract collaborators.
+                </p>
+                <Button
+                  onClick={handleCreateContent}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Post
+                </Button>
+              </div>
+            ) : viewMode === 'grid' ? (
+              /* Grid View */
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                {userContent.map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="relative aspect-square bg-black/40 rounded-lg overflow-hidden group cursor-pointer hover:scale-105 transition-transform duration-300"
+                  >
+                    {/* Thumbnail */}
+                    {item.thumbnail_url ? (
+                      <img
+                        src={item.thumbnail_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-purple-600/40 to-pink-600/40 flex items-center justify-center">
+                        <span className="text-4xl">
+                          {getContentIcon(item.content_type)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="text-center text-white">
+                        {item.content_type === 'video' && (
+                          <Play className="w-8 h-8 mx-auto mb-2" />
+                        )}
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <Heart className="w-4 h-4" />
+                            <span>{item.like_count}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Eye className="w-4 h-4" />
+                            <span>{item.view_count}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Content Type Badge */}
+                    <div className="absolute top-2 left-2">
+                      <Badge className="bg-black/60 text-white border-0 text-xs">
+                        {getContentIcon(item.content_type)}
+                      </Badge>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              /* List View */
+              <div className="space-y-4">
+                {userContent.map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="flex items-center gap-4 p-4 bg-black/40 rounded-xl hover:bg-black/60 transition-colors cursor-pointer group"
+                  >
+                    {/* Thumbnail */}
+                    <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-600/40 to-pink-600/40">
+                      {item.thumbnail_url ? (
+                        <img
+                          src={item.thumbnail_url}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-2xl">
+                            {getContentIcon(item.content_type)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content Info */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-white truncate group-hover:text-purple-300 transition-colors">
+                        {item.title}
+                      </h4>
+                      {item.description && (
+                        <p className="text-gray-400 text-sm line-clamp-1 mt-1">
+                          {item.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                        <span>{formatDate(item.created_at)}</span>
+                        <div className="flex items-center gap-1">
+                          <Heart className="w-3 h-3" />
+                          <span>{item.like_count}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Eye className="w-3 h-3" />
+                          <span>{item.view_count}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-purple-900/30 text-purple-300 border border-purple-800/50">
+                        {item.content_type}
+                      </Badge>
+                      <button className="p-2 text-gray-400 hover:text-white transition-colors">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        </GlassCard>
+      </motion.div>
+
+      {/* Quick Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
         className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"
       >
         {/* Analytics */}
@@ -352,7 +607,7 @@ export function ProfileTab() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
         className="bg-black/40 backdrop-blur-md rounded-2xl overflow-hidden border border-white/10 shadow-md"
       >
         <div className="p-4 border-b border-white/10">
@@ -378,15 +633,21 @@ export function ProfileTab() {
             <ExternalLink className="w-4 h-4 text-gray-500 group-hover:text-gray-300 transition-colors" />
           </button>
           <button
-  onClick={handleSignOut}
-  className="w-full flex items-center justify-between p-3 hover:bg-red-900/30 rounded-xl transition-colors group text-red-400 hover:text-red-300"
->
-  <span>Sign Out</span>
-  <LogOut className="w-4 h-4 text-red-500/80 group-hover:text-red-400 transition-colors" />
-</button>
-
+            onClick={handleSignOut}
+            className="w-full flex items-center justify-between p-3 hover:bg-red-900/30 rounded-xl transition-colors group text-red-400 hover:text-red-300"
+          >
+            <span>Sign Out</span>
+            <LogOut className="w-4 h-4 text-red-500/80 group-hover:text-red-400 transition-colors" />
+          </button>
         </div>
       </motion.div>
+
+      {/* Create Content Modal */}
+      <CreateContentModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onContentCreated={handleContentCreated}
+      />
     </div>
   );
 }
