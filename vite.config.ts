@@ -17,11 +17,6 @@ export default defineConfig(({ mode }) => {
       'process.env': { ...env, VITE_MODE: `"${mode}"` },
       __APP_ENV__: env.APP_ENV,
     },
-    build: {
-      rollupOptions: {
-        external: ['postcss-import']
-      }
-    },
     plugins: [react()],
     optimizeDeps: {
       include: ['@tailwindcss/forms'],
