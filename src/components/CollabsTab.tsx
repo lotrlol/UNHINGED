@@ -6,6 +6,7 @@ import {
   Clock,
   Heart,
   X,
+  Plus,
 } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { Badge } from './ui/Badge';
@@ -14,11 +15,11 @@ import { Badge } from './ui/Badge';
 import { formatDate, getInitials } from '../lib/utils';
 import { useProjectApplications } from '../hooks/useProjectApplications';
 import { CreateProjectModal } from './CreateProjectModal';
-import { Plus } from 'lucide-react';
 
     interface CollabsTabProps {
       project: ProjectWithProfile;
       onSkip?: (projectId: string) => void;
+  onProjectCreated?: () => void;
     }
 
     export function CollabsTab({ project, onSkip }: CollabsTabProps) {
@@ -245,17 +246,18 @@ import { Plus } from 'lucide-react';
               </Button>
 
               <Button
-                onClick={handleApply}
+export function CollabsTab({ project, onSkip, onProjectCreated }: CollabsTabProps) {
                 disabled={loading || applied}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg
                 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700
                 disabled:opacity-50 disabled:pointer-events-none text-white font-medium transition-all"
               >
                 {loading ? (
-                  <>
+      className="fixed bottom-24 right-8 w-16 h-16 rounded-full bg-gradient-to-br from-purple-600/90 to-pink-600/90 backdrop-blur-lg border border-white/10 text-white shadow-2xl hover:shadow-purple-500/30 hover:scale-105 transition-all duration-300 flex items-center justify-center z-50"
                     <div className="w-4 h-4 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />
                     Applying...
                   </>
+      <span className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-600/30 to-pink-600/30 blur-xl animate-ping" />
                 ) : applied ? (
                   <>✓ Applied!</>
                 ) : (
@@ -264,8 +266,18 @@ import { Plus } from 'lucide-react';
                     Let’s&nbsp;Collab!
                   </>
                 )}
-              </Button>
-            </div>
+            <div className="text-6xl mb-4">🚀</div>
+            <h3 className="text-xl font-semibold text-white mb-2">No projects to show</h3>
+            <p className="text-gray-300 mb-6 max-w-md mx-auto">
+              Start your creative journey by posting your first collaboration project!
+            </p>
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-purple-500/20 transition-all"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+            onProjectCreated?.();
+            </Button>
           </div>
         </GlassCard>
       </div>

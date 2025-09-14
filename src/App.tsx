@@ -27,7 +27,7 @@ const App: React.FC<AppProps> = () => {
   const [mounted, setMounted] = useState(false)
   const { user, loading: authLoading } = useAuth()
   const { profile, loading: profileLoading } = useProfile();
-  const { projects, loading: projectsLoading } = useProjects();
+  const { projects, loading: projectsLoading, refetch: refetchProjects } = useProjects();
 
   useEffect(() => {
     setMounted(true)
@@ -179,11 +179,17 @@ const App: React.FC<AppProps> = () => {
             >
               {activeTab === 'collabs' && (
                 projects.length > 0 ? (
-                  <CollabsTab project={projects[0]} onSkip={() => {}} />
+                  <CollabsTab 
+                    project={projects[0]} 
+                    onSkip={() => {}} 
+                    onProjectCreated={refetchProjects}
+                  />
                 ) : (
-                  <div className="text-center py-12 text-gray-400">
-                    {projectsLoading ? 'Loading projects...' : 'No projects available'}
-                  </div>
+                  <CollabsTab 
+                    project={null as any} 
+                    onSkip={() => {}} 
+                    onProjectCreated={refetchProjects}
+                  />
                 )
               )}
               {activeTab === 'content' && <ContentTab />}
