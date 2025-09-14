@@ -85,6 +85,7 @@ export function useProfile() {
         .insert({
           ...profileData,
           id: user.id,
+          onboarding_completed: true,
         })
         .select()
         .single()

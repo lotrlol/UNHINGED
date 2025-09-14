@@ -36,10 +36,12 @@ const App: React.FC<AppProps> = () => {
   useEffect(() => {
     if (user && !profileLoading && !profile && !authLoading && !showOnboarding) {
       setShowOnboarding(true)
-    } else if (profile) {
+    } else if (profile && profile.onboarding_completed) {
       setShowOnboarding(false)
+    } else if (profile && !profile.onboarding_completed && !showOnboarding) {
+      setShowOnboarding(true)
     }
-  }, [user, profile, profileLoading, authLoading])
+  }, [user, profile, profileLoading, authLoading, showOnboarding])
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false)

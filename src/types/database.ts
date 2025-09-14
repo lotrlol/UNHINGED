@@ -19,6 +19,7 @@ export interface Database {
           is_verified: boolean
           phone_verified: boolean
           flagged: boolean
+          onboarding_completed: boolean
           created_at: string
         }
         Insert: {
@@ -38,6 +39,7 @@ export interface Database {
           is_verified?: boolean
           phone_verified?: boolean
           flagged?: boolean
+          onboarding_completed?: boolean
           created_at?: string
         }
         Update: {
@@ -56,6 +58,7 @@ export interface Database {
           is_verified?: boolean
           phone_verified?: boolean
           flagged?: boolean
+          onboarding_completed?: boolean
         }
       }
       projects: {
