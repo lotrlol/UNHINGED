@@ -1,9 +1,9 @@
-import React from 'react'
-import { X, MapPin, Calendar, Shield, Users, Sparkles, Heart } from 'lucide-react'
-import { Button } from './ui/Button'
-import { Badge } from './ui/Badge'
-import { Card, CardContent } from './ui/Card'
-import { formatDate, getInitials } from '../lib/utils'
+import { MapPin, Calendar, MessageCircle, Globe, Mail, Check, Sparkles } from 'lucide-react';
+import { Button } from './ui/Button';
+import { Badge } from './ui/Badge';
+import { getInitials } from '../lib/utils';
+import { ProfileGlassCard } from './ui/GlassCard';
+import { motion } from 'framer-motion';
 
 interface UserProfileModalProps {
   isOpen: boolean
@@ -30,170 +30,181 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   if (!isOpen || !user) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="relative w-full max-w-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ProfileGlassCard onClose={onClose}>
           {/* Cover Image */}
-          <div className="h-32 bg-gradient-to-br from-purple-400 to-cyan-400 rounded-t-2xl">
+          <div className="relative h-40 bg-gradient-to-r from-purple-900/80 to-cyan-900/60">
             {user.cover_url && (
               <img
                 src={user.cover_url}
                 alt="Cover"
-                className="w-full h-full object-cover rounded-t-2xl"
+                className="w-full h-full object-cover mix-blend-overlay opacity-70"
               />
             )}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-900/80" />
+            
+            {/* Avatar */}
+            <div className="absolute -bottom-12 left-6">
+              <div className="w-24 h-24 rounded-2xl border-4 border-white/20 bg-gray-800 shadow-xl overflow-hidden">
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.full_name || user.username}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-600 to-cyan-500 flex items-center justify-center text-white font-bold text-2xl">
+                    {getInitials(user.full_name || user.username)}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-white bg-opacity-90 rounded-full shadow-lg hover:bg-opacity-100 transition-all"
-          >
-            <X className="w-5 h-5 text-gray-700" />
-          </button>
+          {/* Main Content */}
+          <div className="pt-16 px-6 pb-6">
+            {/* User Info */}
+            <div className="mb-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center">
+                    <h2 className="text-2xl font-bold text-white">
+                      {user.full_name || user.username}
+                    </h2>
+                    {user.is_verified && (
+                      <Check className="w-5 h-5 ml-2 text-cyan-400" />
+                    )}
+                  </div>
+                  <p className="text-gray-400">@{user.username}</p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  className="rounded-full bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-white/20 transition-all"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Message
+                </Button>
+              </div>
 
-          {/* Avatar */}
-          <div className="absolute -bottom-12 left-6">
-            <div className="w-24 h-24 rounded-full bg-white shadow-lg flex items-center justify-center border-4 border-white">
-              {user.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user.full_name}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                <span className="text-2xl font-bold text-gray-600">
-                  {getInitials(user.full_name)}
-                </span>
+              {user.tagline && (
+                <p className="mt-3 text-gray-300">{user.tagline}</p>
+              )}
+
+              {/* Location and Joined */}
+              <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-400">
+                {user.location && (
+                  <div className="flex items-center">
+                    <MapPin className="w-4 h-4 mr-1.5 text-purple-400" />
+                    <span>{user.location}</span>
+                    {user.is_remote && <span className="ml-1.5 text-cyan-400">• Remote</span>}
+                  </div>
+                )}
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 mr-1.5 text-purple-400" />
+                  <span>Joined {new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div className="space-y-5">
+              {user.roles && user.roles.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Roles</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {user.roles.map((role) => (
+                      <Badge key={role} className="bg-purple-500/10 text-purple-300 border-purple-500/20 hover:bg-purple-500/20 transition-colors">
+                        {role}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {user.skills && user.skills.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {user.skills.map((skill) => (
+                      <Badge key={skill} className="bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 transition-colors">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {user.looking_for && user.looking_for.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    Looking For
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {user.looking_for.map((item) => (
+                      <Badge
+                        key={item}
+                        className="text-cyan-300 border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors"
+                      >
+                        {item}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {user.vibe_words && user.vibe_words.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                    Vibe Words
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {user.vibe_words.map((word) => (
+                      <Badge
+                        key={word}
+                        className="bg-pink-500/10 text-pink-300 border-pink-500/20 hover:bg-pink-500/20 transition-colors"
+                      >
+                        <Sparkles className="w-3 h-3 mr-1.5" />
+                        {word}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
-          </div>
-        </div>
 
-        <div className="p-6 pt-16">
-          {/* Basic Info */}
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                {user.full_name}
-                {user.is_verified && (
-                  <Badge variant="success" size="sm">✓</Badge>
-                )}
-              </h1>
-              <p className="text-gray-600">@{user.username}</p>
-            </div>
-            <Button variant="primary" size="sm" className="flex items-center gap-2">
-              <Heart className="w-4 h-4" />
-              Connect
-            </Button>
-          </div>
-
-          {/* Tagline */}
-          {user.tagline && (
-            <p className="text-gray-700 mb-4 italic">"{user.tagline}"</p>
-          )}
-
-          {/* Roles */}
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="w-4 h-4 text-purple-600" />
-              <h3 className="font-medium text-gray-900">Creator Roles</h3>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {user.roles.map((role) => (
-                <Badge key={role} variant="default">
-                  {role}
-                </Badge>
-              ))}
+            {/* Contact Info */}
+            <div className="mt-8 pt-6 border-t border-white/10">
+              <h3 className="text-sm font-medium text-gray-400 mb-3">Contact Info</h3>
+              <div className="space-y-2">
+                <div className="flex items-center text-gray-300">
+                  <Mail className="w-4 h-4 mr-3 text-gray-400" />
+                  <span className="text-sm">email@example.com</span>
+                </div>
+                <div className="flex items-center text-gray-300">
+                  <Globe className="w-4 h-4 mr-3 text-gray-400" />
+                  <a href="#" className="text-sm hover:text-cyan-400 transition-colors">portfolio.com</a>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Skills */}
-          {user.skills && user.skills.length > 0 && (
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-yellow-600" />
-                <h3 className="font-medium text-gray-900">Skills</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {user.skills.map((skill) => (
-                  <Badge key={skill} variant="secondary">
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Looking For */}
-          {user.looking_for && user.looking_for.length > 0 && (
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Heart className="w-4 h-4 text-pink-600" />
-                <h3 className="font-medium text-gray-900">Looking to collaborate with</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {user.looking_for.map((role) => (
-                  <Badge key={role} variant="success">
-                    {role}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Vibe Words */}
-          {user.vibe_words && user.vibe_words.length > 0 && (
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                <h3 className="font-medium text-gray-900">Creative Vibe</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {user.vibe_words.map((word) => (
-                  <Badge key={word} variant="secondary">
-                    ✨ {word}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Location & Details */}
-          <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-6">
-            {user.location && (
-              <div className="flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                <span>{user.location}</span>
-              </div>
-            )}
-            {user.is_remote && (
-              <Badge variant="success" size="sm">🌍 Remote OK</Badge>
-            )}
-            <div className="flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
-              <span>Joined {formatDate(user.created_at)}</span>
-            </div>
-            {user.is_verified && (
-              <div className="flex items-center gap-1 text-green-600">
-                <Shield className="w-4 h-4" />
-                <span>Verified</span>
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
-            <Button variant="primary" className="flex-1">
-              Start Collaboration
-            </Button>
-            <Button variant="outline" className="flex-1">
-              View Portfolio
-            </Button>
-          </div>
-        </div>
-      </div>
+        </ProfileGlassCard>
+      </motion.div>
     </div>
   )
 }

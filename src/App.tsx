@@ -1,41 +1,20 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LandingGlassCard } from './components/ui/GlassCard';
 import { Navigation } from './components/Navigation';
 import { CollabsTab } from './components/CollabsTab';
-import { ContentTab } from './components/ContentTab';
+import ContentTab from './components/ContentTab';
 import { DiscoverTab } from './components/DiscoverTab';
 import { MatchesTab } from './components/MatchesTab';
 import { ProfileTab } from './components/ProfileTab';
 import { AuthModal } from './components/AuthModal';
 import { OnboardingWizard } from './components/OnboardingWizard';
-import { NotificationBell } from './components/NotificationBell';
 import { useAuth } from './hooks/useAuth';
 import { useProfile } from './hooks/useProfile';
-import { useInView } from 'react-intersection-observer';
+import { useProjects } from './hooks/useProjects';
 
 type Tab = 'collabs' | 'content' | 'discover' | 'matches' | 'profile';
-
-interface TabComponentProps {
-  // Add any common props that your tab components might need
-}
-
-type TabComponent = React.FC<TabComponentProps>;
-
-// Define the shape of our tab components
-const tabComponents = {
-  collabs: CollabsTab,
-  content: ContentTab,
-  discover: DiscoverTab,
-  matches: MatchesTab,
-  profile: ProfileTab
-} as const;
-
-// Create a type from the object keys
-type TabComponentsType = typeof tabComponents;
-
-// Create a union type of all tab names
-type TabKey = keyof typeof tabComponents;
 
 interface AppProps {}
 
@@ -46,11 +25,8 @@ const App: React.FC<AppProps> = () => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [mounted, setMounted] = useState(false)
   const { user, loading: authLoading } = useAuth()
-  const { profile, loading: profileLoading } = useProfile()
-  const [ref, inView] = useInView({
-    threshold: 0.1,
-    triggerOnce: true
-  });
+  const { profile, loading: profileLoading } = useProfile();
+  const { projects, loading: projectsLoading } = useProjects();
 
   useEffect(() => {
     setMounted(true)
@@ -79,19 +55,26 @@ const App: React.FC<AppProps> = () => {
     setAuthMode(mode);
   };
 
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+  };
+
   // Loading state with glass effect
   if (authLoading || !mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50/30 via-white to-secondary-50/30 dark:from-gray-900/95 dark:to-gray-800/95">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-panel p-8 max-w-md w-full mx-4 text-center"
-        >
-          <div className="w-16 h-16 rounded-full border-4 border-primary-200 dark:border-primary-800 border-t-primary-500 dark:border-t-primary-400 animate-spin mx-auto mb-6"></div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Loading</h2>
-          <p className="text-gray-600 dark:text-gray-300">Getting things ready for you...</p>
-        </motion.div>
+      <div className="min-h-screen bg-gray-900 text-gray-100 pb-20">
+        <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
+        <AnimatePresence mode="wait">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-panel p-8 max-w-md w-full mx-4 text-center"
+          >
+            <div className="w-16 h-16 rounded-full border-4 border-primary-200 dark:border-primary-800 border-t-primary-500 dark:border-t-primary-400 animate-spin mx-auto mb-6"></div>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Loading</h2>
+            <p className="text-gray-600 dark:text-gray-300">Getting things ready for you...</p>
+          </motion.div>
+        </AnimatePresence>
       </div>
     );
   }
@@ -99,7 +82,7 @@ const App: React.FC<AppProps> = () => {
   // Auth state with glass effect
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary-50/30 via-white to-secondary-50/30 dark:from-gray-900/95 dark:to-gray-800/95 relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-gray-900 to-purple-900/30 relative overflow-hidden">
         {/* Animated background blobs */}
         <motion.div 
           className="blob blob-1"
@@ -140,30 +123,19 @@ const App: React.FC<AppProps> = () => {
           }}
         />
         
-        <motion.div 
+        <LandingGlassCard
+          title="UNHINGED"
+          description="Connect with creators and find your next collaboration"
+          ctaText="Get Started"
+          onCtaClick={() => setShowAuthModal(true)}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="glass-panel p-8 max-w-md w-full relative z-10 transform hover:scale-[1.02] transition-all duration-500"
         >
-          <div className="text-center">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent mb-3">
-              CollabSpace
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
-              Connect with creators and find your next collaboration
-            </p>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowAuthModal(true)}
-              className="glass-button bg-gradient-to-r from-primary-500 to-secondary-500 text-white w-full py-3 px-6 rounded-xl font-medium hover:shadow-lg hover:shadow-primary-500/20 transition-all duration-300"
-            >
-              Get Started
-              <span className="ml-2">→</span>
-            </motion.button>
+          <div className="mt-6">
+            <p className="text-sm text-purple-200/80">Join our community of creators and collaborators</p>
           </div>
-        </motion.div>
+        </LandingGlassCard>
         
         <AnimatePresence>
           {showAuthModal && (
@@ -181,101 +153,62 @@ const App: React.FC<AppProps> = () => {
   }
 
   // Main app layout with glass effect
-  const ActiveTab = tabComponents[activeTab as TabKey];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50/30 via-white to-secondary-50/30 dark:from-gray-900/95 dark:to-gray-800/95 relative overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-purple-900/30">
       {/* Background blobs */}
-      <motion.div 
-        className="blob blob-1"
-        animate={{
-          x: [0, 10, 0],
-          y: [0, -10, 0],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          repeatType: 'reverse',
-        }}
-      />
-      <motion.div 
-        className="blob blob-2"
-        animate={{
-          x: [0, -15, 0],
-          y: [0, 15, 0],
-        }}
-        transition={{
-          duration: 25,
-          repeat: Infinity,
-          repeatType: 'reverse',
-          delay: 2
-        }}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute top-1/4 -left-4 w-96 h-96 bg-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+        <div className="absolute top-1/3 -right-4 w-96 h-96 bg-secondary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-1/2 w-96 h-96 bg-accent/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
+      </div>
+      
+      <div className="min-h-screen flex flex-col bg-gray-900 text-gray-100">
+        {/* Main content area with padding to account for fixed navigation */}
+        <main className="flex-1 container mx-auto px-4 py-6 pb-32 sm:pb-24">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="h-full"
+            >
+              {activeTab === 'collabs' && (
+                projects.length > 0 ? (
+                  <CollabsTab project={projects[0]} onSkip={() => {}} />
+                ) : (
+                  <div className="text-center py-12 text-gray-400">
+                    {projectsLoading ? 'Loading projects...' : 'No projects available'}
+                  </div>
+                )
+              )}
+              {activeTab === 'content' && <ContentTab />}
+              {activeTab === 'discover' && <DiscoverTab />}
+              {activeTab === 'matches' && <MatchesTab />}
+              {activeTab === 'profile' && <ProfileTab />}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+
+        {/* Fixed bottom navigation */}
+        <Navigation activeTab={activeTab} onTabChange={handleTabChange} />
+      </div>
+
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)}
+        mode={authMode}
+        onModeChange={handleAuthModeChange}
+        onSuccess={handleAuthSuccess}
       />
       
-      <AnimatePresence mode="wait">
-        {showOnboarding ? (
-          <OnboardingWizard onComplete={handleOnboardingComplete} />
-        ) : (
-          <>
-            {/* Glass header */}
-            <motion.header 
-              initial={{ y: -100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.5, type: 'spring', stiffness: 100 }}
-              className="glass sticky top-0 z-40 backdrop-blur-xl border-b border-white/20 dark:border-gray-700/30"
-            >
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-                    CollabSpace
-                  </h1>
-                  <div className="flex items-center space-x-4">
-                    <NotificationBell />
-                    <motion.button
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setShowAuthModal(true)}
-                      className="glass-button flex items-center space-x-2 px-4 py-2 text-sm"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                      <span>My Account</span>
-                    </motion.button>
-                  </div>
-                </div>
-              </div>
-            </motion.header>
-
-            <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
-
-            <main 
-              ref={ref}
-              className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
-            >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="w-full"
-                >
-                  <ActiveTab />
-                </motion.div>
-              </AnimatePresence>
-            </main>
-          </>
-        )}
-      </AnimatePresence>
-
       <AnimatePresence>
-        {showAuthModal && (
-          <AuthModal
-            isOpen={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
-            mode={authMode}
-            onModeChange={handleAuthModeChange}
-            onSuccess={handleAuthSuccess}
+        {showOnboarding && (
+          <OnboardingWizard 
+            isOpen={showOnboarding} 
+            onClose={handleOnboardingComplete}
+            onComplete={handleOnboardingComplete}
           />
         )}
       </AnimatePresence>

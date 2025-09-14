@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { Heart, X, MapPin, Sparkles, Users, Calendar, Loader2 } from 'lucide-react'
-import { Card, CardContent } from './ui/Card'
+import { FilterGlassCard } from './ui/GlassCard'
 import { Badge } from './ui/Badge'
 import { Button } from './ui/Button'
-import { useUserDiscovery, DiscoveryFilters } from '../hooks/useUserDiscovery'
+import { useUserDiscovery } from '../hooks/useUserDiscovery'
 import { DiscoveryFilters as DiscoveryFiltersComponent } from './DiscoveryFilters'
 import { formatDate, getInitials } from '../lib/utils'
+import { motion } from 'framer-motion'
 
 export function DiscoverTab() {
   const { users, allUsers, filters, loading, error, liking, likeUser, passUser, updateFilters } = useUserDiscovery()
@@ -17,23 +18,19 @@ export function DiscoverTab() {
 
   const currentUser = users[currentIndex]
 
-  // Reset current index when filters change
   React.useEffect(() => {
     setCurrentIndex(0)
   }, [filters])
 
   const handleLike = async () => {
     if (!currentUser || liking) return
-
     setSwipeDirection('right')
-    
     setTimeout(async () => {
       const { error } = await likeUser(currentUser.id)
       if (error) {
         console.error('Error liking user:', error)
         alert('Failed to like user: ' + error)
       }
-      
       setCurrentIndex(prev => prev + 1)
       setSwipeDirection(null)
     }, 300)
@@ -41,21 +38,17 @@ export function DiscoverTab() {
 
   const handlePass = async () => {
     if (!currentUser) return
-
     setSwipeDirection('left')
-    
     setTimeout(async () => {
       const { error } = await passUser(currentUser.id)
       if (error) {
         console.error('Error passing user:', error)
       }
-      
       setCurrentIndex(prev => prev + 1)
       setSwipeDirection(null)
     }, 300)
   }
 
-  // Touch/Mouse event handlers
   const handleStart = (clientX: number, clientY: number) => {
     if (swipeDirection || !currentUser) return
     setIsDragging(true)
@@ -65,106 +58,73 @@ export function DiscoverTab() {
 
   const handleMove = (clientX: number, clientY: number) => {
     if (!isDragging || swipeDirection) return
-    
     const deltaX = clientX - startPos.x
     const deltaY = clientY - startPos.y
-    
     setDragOffset({ x: deltaX, y: deltaY })
   }
 
   const handleEnd = () => {
     if (!isDragging || swipeDirection) return
-    
     setIsDragging(false)
-    
-    const threshold = 100 // minimum distance to trigger swipe
+    const threshold = 100
     const { x } = dragOffset
-    
     if (Math.abs(x) > threshold) {
-      if (x > 0) {
-        // Swiped right - like
-        handleLike()
-      } else {
-        // Swiped left - pass
-        handlePass()
-      }
+      if (x > 0) handleLike()
+      else handlePass()
     } else {
-      // Snap back to center
       setDragOffset({ x: 0, y: 0 })
     }
   }
 
-  // Touch events
   const handleTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0]
     handleStart(touch.clientX, touch.clientY)
   }
-
   const handleTouchMove = (e: React.TouchEvent) => {
     const touch = e.touches[0]
     handleMove(touch.clientX, touch.clientY)
   }
+  const handleTouchEnd = () => handleEnd()
 
-  const handleTouchEnd = () => {
-    handleEnd()
-  }
-
-  // Mouse events (for desktop)
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
     handleStart(e.clientX, e.clientY)
   }
 
-  // Add global mouse event listeners for dragging
   React.useEffect(() => {
     if (!isDragging) return
-
     const handleMouseMove = (e: MouseEvent) => {
       e.preventDefault()
       handleMove(e.clientX, e.clientY)
     }
-
     const handleMouseUp = (e: MouseEvent) => {
       e.preventDefault()
       handleEnd()
     }
-
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
   }, [isDragging, dragOffset.x, dragOffset.y])
 
-  // Keyboard support
   React.useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (swipeDirection || !currentUser) return
-      
-      if (e.key === 'ArrowLeft') {
-        handlePass()
-      } else if (e.key === 'ArrowRight') {
-        handleLike()
-      }
+      if (e.key === 'ArrowLeft') handlePass()
+      else if (e.key === 'ArrowRight') handleLike()
     }
-
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [currentUser, swipeDirection])
 
   if (loading) {
     return (
-      <div className="p-4 pb-20">
-        <DiscoveryFiltersComponent
-          filters={filters}
-          onFiltersChange={updateFilters}
-          userCount={0}
-          totalCount={0}
-        />
+      <div className="p-4 pb-20 relative">
+        <DiscoveryFiltersComponent filters={filters} onFiltersChange={updateFilters} userCount={0} totalCount={0} />
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
         </div>
       </div>
     )
@@ -172,90 +132,69 @@ export function DiscoverTab() {
 
   if (error) {
     return (
-      <div className="p-4 pb-20">
-        <DiscoveryFiltersComponent
-          filters={filters}
-          onFiltersChange={updateFilters}
-          userCount={0}
-          totalCount={allUsers.length}
-        />
-        <div className="text-center py-12">
+      <div className="p-4 pb-20 relative">
+        <DiscoveryFiltersComponent filters={filters} onFiltersChange={updateFilters} userCount={0} totalCount={allUsers.length} />
+        <FilterGlassCard className="p-8 text-center" variant="elevated">
           <div className="text-6xl mb-4">⚠️</div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Error loading users
-          </h3>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <Button variant="primary" onClick={() => window.location.reload()}>
+          <h3 className="text-xl font-semibold text-white mb-2">Error loading users</h3>
+          <p className="text-gray-300 mb-6">{error}</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-colors"
+          >
             Try Again
           </Button>
-        </div>
+        </FilterGlassCard>
       </div>
     )
   }
 
   if (!currentUser || currentIndex >= users.length) {
     return (
-      <div className="p-4 pb-20">
-        <DiscoveryFiltersComponent
-          filters={filters}
-          onFiltersChange={updateFilters}
-          userCount={users.length}
-          totalCount={allUsers.length}
-        />
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">{users.length === 0 ? '🔍' : '🎉'}</div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            {users.length === 0 ? 'No users match your filters' : 'No more users to discover'}
-          </h3>
-          <p className="text-gray-600 mb-6">
-            {users.length === 0 
-              ? 'Try adjusting your filters to see more creators.'
-              : 'Check back later for new creators to connect with!'
-            }
-          </p>
-          {users.length === 0 ? (
-            <Button variant="outline" onClick={() => updateFilters({})}>
-              Clear Filters
+      <div className="p-4 pb-20 relative">
+        <DiscoveryFiltersComponent filters={filters} onFiltersChange={updateFilters} userCount={users.length} totalCount={allUsers.length} />
+        <FilterGlassCard className="px-8 py-12 text-center" variant="elevated">
+          <div className="flex flex-col items-center">
+            <div className="text-7xl mb-6 transform hover:scale-110 transition-transform duration-300">
+              {users.length === 0 ? '🔍' : '🎉'}
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-3 bg-gradient-to-r from-purple-200 to-pink-200 bg-clip-text text-transparent">
+              {users.length === 0 ? 'No users match your filters' : 'No more users to discover'}
+            </h3>
+            <p className="text-gray-300/90 mb-8 max-w-md mx-auto leading-relaxed">
+              {users.length === 0
+                ? 'Try adjusting your filters to see more creators.'
+                : 'Check back later for new creators to connect with!'}
+            </p>
+            <Button
+              onClick={() => (users.length === 0 ? updateFilters({}) : setCurrentIndex(0))}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-all duration-300 px-8 py-3 rounded-xl shadow-lg hover:shadow-purple-500/20"
+            >
+              {users.length === 0 ? 'Clear All Filters' : 'Start Over'}
             </Button>
-          ) : (
-            <Button variant="primary" onClick={() => setCurrentIndex(0)}>
-              Start Over
-            </Button>
-          )}
-        </div>
+          </div>
+        </FilterGlassCard>
       </div>
     )
   }
 
-  // Calculate transform and rotation based on drag
-  const getCardTransform = () => {
-    if (swipeDirection === 'left') {
-      return 'translateX(-100%) rotate(-10deg)'
-    } else if (swipeDirection === 'right') {
-      return 'translateX(100%) rotate(10deg)'
-    } else if (isDragging) {
-      const rotation = dragOffset.x * 0.1 // subtle rotation while dragging
-      return `translateX(${dragOffset.x}px) translateY(${dragOffset.y * 0.1}px) rotate(${rotation}deg)`
-    }
-    return 'translateX(0) translateY(0) rotate(0deg)'
-  }
-
-  // Calculate opacity for like/pass indicators
-  const getLikeOpacity = () => {
-    if (swipeDirection === 'right') return 1
-    if (isDragging && dragOffset.x > 50) return Math.min(dragOffset.x / 100, 1)
-    return 0
-  }
-
-  const getPassOpacity = () => {
-    if (swipeDirection === 'left') return 1
-    if (isDragging && dragOffset.x < -50) return Math.min(Math.abs(dragOffset.x) / 100, 1)
-    return 0
-  }
+  const likeOpacity = swipeDirection === 'right' ? 1 : isDragging && dragOffset.x > 50 ? Math.min(dragOffset.x / 100, 1) : 0
+  const passOpacity = swipeDirection === 'left' ? 1 : isDragging && dragOffset.x < -50 ? Math.min(Math.abs(dragOffset.x) / 100, 1) : 0
 
   return (
-    <div className="p-4 pb-20">
-      {/* Filters */}
+    <div className="p-4 pb-24 relative">
+      {/* Animated gradient blobs */}
+      <motion.div
+        className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-600 rounded-full blur-3xl opacity-25"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+      />
+      <motion.div
+        className="absolute bottom-0 right-0 w-[28rem] h-[28rem] bg-gradient-to-tr from-indigo-500 via-purple-600 to-pink-500 rounded-full blur-3xl opacity-20"
+        animate={{ rotate: -360 }}
+        transition={{ duration: 80, repeat: Infinity, ease: 'linear' }}
+      />
+
       <DiscoveryFiltersComponent
         filters={filters}
         onFiltersChange={updateFilters}
@@ -264,244 +203,137 @@ export function DiscoverTab() {
       />
 
       {/* Header */}
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Discover Creators</h2>
-        <p className="text-gray-600">
-          Find your next creative collaborator
-        </p>
-        <div className="mt-2 text-sm text-gray-500">
-          {currentIndex + 1} of {users.length}
-        </div>
+      <div className="text-center mb-6 relative z-10">
+        <h2 className="text-2xl font-bold text-white mb-1">Discover Creators</h2>
+        <p className="text-gray-300">Find your next creative collaborator</p>
+        <div className="mt-2 text-sm text-gray-400">{currentIndex + 1} of {users.length}</div>
       </div>
 
-      {/* User Card */}
-      <div className="max-w-sm mx-auto relative">
-        {/* Like Indicator */}
-        <div 
-          className="absolute top-8 left-8 z-10 pointer-events-none"
-          style={{ opacity: getLikeOpacity() }}
-        >
-          <div className="bg-green-500 text-white px-4 py-2 rounded-lg font-bold text-lg border-4 border-green-400 rotate-12">
+      {/* Swipe Card */}
+      <motion.div
+        className="max-w-sm mx-auto relative z-10"
+        style={{
+          transform: isDragging ? `translateX(${dragOffset.x}px) translateY(${dragOffset.y * 0.1}px) rotate(${dragOffset.x * 0.1}deg)` : undefined,
+          transition: isDragging ? 'none' : 'all 0.3s ease-out',
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+      >
+        {/* Like/Pass indicators */}
+        <div className="absolute top-8 left-8 z-20 pointer-events-none" style={{ opacity: likeOpacity }}>
+          <div className="bg-green-500/80 text-white px-4 py-2 rounded-lg font-bold text-lg border-4 border-green-400 rotate-12">
             LIKE
           </div>
         </div>
-
-        {/* Pass Indicator */}
-        <div 
-          className="absolute top-8 right-8 z-10 pointer-events-none"
-          style={{ opacity: getPassOpacity() }}
-        >
-          <div className="bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-lg border-4 border-red-400 -rotate-12">
+        <div className="absolute top-8 right-8 z-20 pointer-events-none" style={{ opacity: passOpacity }}>
+          <div className="bg-red-500/80 text-white px-4 py-2 rounded-lg font-bold text-lg border-4 border-red-400 -rotate-12">
             PASS
           </div>
         </div>
 
-        <Card 
-          className={`transition-all duration-300 cursor-grab active:cursor-grabbing select-none ${
-            swipeDirection ? 'opacity-0' : ''
-          }`}
-          style={{
-            transform: getCardTransform(),
-            transition: isDragging ? 'none' : 'all 0.3s ease-out'
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={handleMouseDown}
-        >
-          {/* Cover/Avatar Section */}
-          <div className="relative h-64 bg-gradient-to-br from-purple-400 to-cyan-400">
+        <FilterGlassCard className={`overflow-hidden rounded-2xl cursor-grab active:cursor-grabbing select-none ${swipeDirection ? 'opacity-0' : ''}`} variant="elevated">
+          {/* Image top half with gradient fade */}
+          <div className="relative h-72">
             {currentUser.cover_url ? (
-              <img
-                src={currentUser.cover_url}
-                alt={`${currentUser.full_name}'s cover`}
-                className="w-full h-full object-cover"
-                draggable={false}
-              />
+              <img src={currentUser.cover_url} alt="cover" className="w-full h-full object-cover" draggable={false} />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="text-white text-8xl font-bold opacity-20">
-                  {currentUser.full_name.charAt(0).toUpperCase()}
-                </div>
+              <div className="w-full h-full bg-gradient-to-br from-purple-600/40 to-pink-600/40 flex items-center justify-center text-6xl text-white/30 font-bold">
+                {currentUser.full_name.charAt(0)}
               </div>
             )}
-            
-            {/* Avatar */}
-            <div className="absolute -bottom-8 left-6">
-              <div className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center border-4 border-white">
-                {currentUser.avatar_url ? (
-                  <img
-                    src={currentUser.avatar_url}
-                    alt={currentUser.full_name}
-                    className="w-full h-full rounded-full object-cover"
-                    draggable={false}
-                  />
-                ) : (
-                  <span className="text-lg font-bold text-gray-600">
-                    {getInitials(currentUser.full_name)}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Verified Badge */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             {currentUser.is_verified && (
               <div className="absolute top-4 right-4">
-                <Badge variant="success" className="bg-white text-green-600">
-                  ✓ Verified
-                </Badge>
+                <Badge className="bg-green-600/80 text-white border border-green-400">✓ Verified</Badge>
               </div>
             )}
           </div>
 
-          <CardContent className="pt-12">
-            {/* Basic Info */}
-            <div className="mb-4">
-              <h3 className="text-2xl font-bold text-gray-900 mb-1">
-                {currentUser.full_name}
-              </h3>
-              <p className="text-gray-600">@{currentUser.username}</p>
-            </div>
+          {/* Info bottom half */}
+          <div className="p-6">
+            <h3 className="text-2xl font-bold text-white">{currentUser.full_name}</h3>
+            <p className="text-gray-300 mb-3">@{currentUser.username}</p>
+            {currentUser.tagline && <p className="text-gray-400 italic mb-4">"{currentUser.tagline}"</p>}
 
-            {/* Tagline */}
-            {currentUser.tagline && (
-              <p className="text-gray-700 mb-4 italic">
-                "{currentUser.tagline}"
-              </p>
+            {currentUser.roles.length > 0 && (
+              <div className="mb-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm text-gray-300">Creator roles:</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.roles.map(r => (
+                    <Badge key={r} className="bg-black/40 border border-white/10 text-white">{r}</Badge>
+                  ))}
+                </div>
+              </div>
             )}
 
-            {/* Roles */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-purple-600" />
-                <span className="text-sm font-medium text-gray-700">Creator roles:</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {currentUser.roles.slice(0, 3).map((role) => (
-                  <Badge key={role} variant="default" size="sm">
-                    {role}
-                  </Badge>
-                ))}
-                {currentUser.roles.length > 3 && (
-                  <Badge variant="secondary" size="sm">
-                    +{currentUser.roles.length - 3}
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Looking For */}
             {currentUser.looking_for.length > 0 && (
-              <div className="mb-4">
+              <div className="mb-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Heart className="w-4 h-4 text-pink-600" />
-                  <span className="text-sm font-medium text-gray-700">Looking to work with:</span>
+                  <Heart className="w-4 h-4 text-pink-400" />
+                  <span className="text-sm text-gray-300">Looking to work with:</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {currentUser.looking_for.slice(0, 3).map((role) => (
-                    <Badge key={role} variant="secondary" size="sm">
-                      {role}
-                    </Badge>
+                  {currentUser.looking_for.map(r => (
+                    <Badge key={r} className="bg-pink-900/30 text-pink-200 border border-pink-800/40">{r}</Badge>
                   ))}
-                  {currentUser.looking_for.length > 3 && (
-                    <Badge variant="secondary" size="sm">
-                      +{currentUser.looking_for.length - 3}
-                    </Badge>
-                  )}
                 </div>
               </div>
             )}
 
-            {/* Skills */}
             {currentUser.skills.length > 0 && (
-              <div className="mb-4">
+              <div className="mb-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-yellow-600" />
-                  <span className="text-sm font-medium text-gray-700">Skills:</span>
+                  <Sparkles className="w-4 h-4 text-yellow-400" />
+                  <span className="text-sm text-gray-300">Skills:</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {currentUser.skills.slice(0, 4).map((skill) => (
-                    <Badge key={skill} variant="secondary" size="sm">
-                      {skill}
-                    </Badge>
-                  ))}
-                  {currentUser.skills.length > 4 && (
-                    <Badge variant="secondary" size="sm">
-                      +{currentUser.skills.length - 4}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Vibe Words */}
-            {currentUser.vibe_words.length > 0 && (
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm font-medium text-gray-700">Creative vibe:</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.vibe_words.slice(0, 3).map((word) => (
-                    <Badge key={word} variant="secondary" size="sm">
-                      ✨ {word}
-                    </Badge>
+                  {currentUser.skills.map(s => (
+                    <Badge key={s} className="bg-black/40 border border-white/10 text-white">{s}</Badge>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Location & Details */}
-            <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-6">
+            <div className="flex flex-wrap gap-3 text-sm text-gray-400">
               {currentUser.location && (
                 <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>{currentUser.location}</span>
+                  <MapPin className="w-4 h-4" /> {currentUser.location}
                 </div>
               )}
-              {currentUser.is_remote && (
-                <Badge variant="success" size="sm">🌍 Remote OK</Badge>
-              )}
+              {currentUser.is_remote && <Badge className="bg-blue-900/30 text-blue-200 border border-blue-800/40">🌍 Remote OK</Badge>}
               <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>Joined {formatDate(currentUser.created_at)}</span>
+                <Calendar className="w-4 h-4" /> Joined {formatDate(currentUser.created_at)}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </FilterGlassCard>
 
-        {/* Action Buttons */}
-        <div className="flex justify-center gap-6 mt-6">
+        {/* Action buttons */}
+        <div className="flex justify-center gap-6 mt-8">
           <Button
-            variant="outline"
-            size="lg"
             onClick={handlePass}
             disabled={liking || swipeDirection !== null}
-            className="w-16 h-16 rounded-full border-2 border-gray-300 hover:border-red-300 hover:bg-red-50 flex items-center justify-center"
+            className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-md hover:bg-red-600/40 flex items-center justify-center"
           >
-            <X className="w-6 h-6 text-gray-600 hover:text-red-600" />
+            <X className="w-6 h-6 text-red-400" />
           </Button>
-          
           <Button
-            variant="primary"
-            size="lg"
             onClick={handleLike}
             disabled={liking || swipeDirection !== null}
-            className="w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 flex items-center justify-center"
+            className="w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 flex items-center justify-center"
           >
-            {liking ? (
-              <Loader2 className="w-6 h-6 animate-spin text-white" />
-            ) : (
-              <Heart className="w-6 h-6 text-white" />
-            )}
+            {liking ? <Loader2 className="w-6 h-6 animate-spin text-white" /> : <Heart className="w-6 h-6 text-white" />}
           </Button>
         </div>
+      </motion.div>
 
-        {/* Keyboard Shortcuts Hint */}
-        <div className="text-center mt-4 text-xs text-gray-500 space-y-1">
-          <p>Swipe left to pass, right to like</p>
-          <p>Or press ← to pass, → to like</p>
-        </div>
+      <div className="text-center mt-6 text-xs text-gray-400 relative z-10">
+        Swipe left to pass, right to like • Or use ← / →
       </div>
     </div>
   )

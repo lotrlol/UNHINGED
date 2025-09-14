@@ -1,9 +1,11 @@
-import React from 'react'
-import { Users, Video, Heart, User, Compass } from 'lucide-react'
+import React from 'react';
+import { Users, Video, Heart, User, Compass } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { NavigationGlassCard } from './ui/GlassCard';
 
 interface NavigationProps {
-  activeTab: 'collabs' | 'content' | 'discover' | 'matches' | 'profile'
-  onTabChange: (tab: 'collabs' | 'content' | 'discover' | 'matches' | 'profile') => void
+  activeTab: 'collabs' | 'content' | 'discover' | 'matches' | 'profile';
+  onTabChange: (tab: 'collabs' | 'content' | 'discover' | 'matches' | 'profile') => void;
 }
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
@@ -11,35 +13,51 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
     { id: 'collabs' as const, label: 'Collabs', icon: Users },
     { id: 'content' as const, label: 'Content', icon: Video },
     { id: 'discover' as const, label: 'Discover', icon: Compass },
-    { id: 'matches' as const, label: 'Matches', icon: Heart },
+    { id: 'matches' as const, label: 'Friends', icon: Heart },
     { id: 'profile' as const, label: 'Profile', icon: User },
-  ]
+  ];
 
   return (
-    <nav className="bg-white border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex space-x-8">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            const isActive = activeTab === tab.id
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id)}
-                className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  isActive
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span>{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
+    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <NavigationGlassCard className="w-full px-3 py-2">
+
+          {/* Tabs row */}
+          <div className="flex items-center justify-around gap-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+
+              return (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => onTabChange(tab.id)}
+                  className={`relative flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-300
+                    ${isActive ? 'text-white' : 'text-gray-300 hover:text-white'}`}
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.92 }}
+                >
+                  {isActive && (
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-purple-600/40 to-pink-600/40 rounded-xl backdrop-blur-md"
+                      layoutId="activeTab"
+                      transition={{ type: 'spring', bounce: 0.3, duration: 0.6 }}
+                    />
+                  )}
+                  <div className="relative z-10 flex flex-col items-center">
+                    <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-300'}`} />
+                    <span className="text-xs mt-1 font-medium">{tab.label}</span>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        </NavigationGlassCard>
+      </motion.div>
     </nav>
-  )
+  );
 }

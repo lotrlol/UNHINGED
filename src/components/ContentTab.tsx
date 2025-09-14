@@ -1,435 +1,406 @@
-import React, { useRef, useEffect } from 'react'
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent } from './ui/Card'
-import { Badge } from './ui/Badge'
-import { Button } from './ui/Button'
-import { ExternalLink, MessageSquare, Share2, MoreHorizontal, Music, Heart, UserPlus, Volume2, VolumeX, Image as ImageIcon, FileText } from 'lucide-react'
-import { useContent, ContentFilters } from '../hooks/useContent'
-import { formatDate, getInitials } from '../lib/utils'
-import { CreateContentModal } from './CreateContentModal'
-import { UserProfileModal } from './UserProfileModal'
-import { supabase } from '../lib/supabase'
-import { useInView } from 'react-intersection-observer'
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageSquare, Share2, Plus, Heart } from 'lucide-react';
+import { ContentGlassCard } from './ui/GlassCard';
+import { formatDate, getInitials } from '../lib/utils';
+import { CreateContentModal } from './CreateContentModal';
+import { UserProfileModal } from './UserProfileModal';
+import { useContent, ContentPost as FetchedContentPost } from '../hooks/useContent';
 
-const getContentEmoji = (type: string) => {
-  switch (type) {
-    case 'video':
-      return '🎬'
-    case 'audio':
-      return '🎵'
-    case 'article':
-      return '📝'
-    default:
-      return '📸'
-  }
+/* -------------------- VideoPlayer -------------------- */
+interface VideoPlayerProps {
+  src: string | null;
+  thumbnail: string | null;
+  title: string;
+  className?: string;
 }
 
-const CONTENT_TYPES = [
-  { value: 'video', label: 'Video', icon: Music },
-  { value: 'audio', label: 'Audio', icon: Music },
-  { value: 'image', label: 'Image', icon: ImageIcon },
-  { value: 'article', label: 'Article', icon: FileText }
-] as const
+const VideoPlayer = ({ src, thumbnail, title, className = '' }: VideoPlayerProps) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [showControls, setShowControls] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
 
-const getThumbnailUrl = (item: any) => {
-  // Handle Supabase storage paths vs full URLs
-  if (item.thumbnail_url) {
-    // If it's already a full URL, use it
-    if (item.thumbnail_url.startsWith('http')) {
-      return item.thumbnail_url
+  const togglePlayPause = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play().then(() => setIsPlaying(true));
+    } else {
+      video.pause();
+      setIsPlaying(false);
     }
-    // If it's a storage path, generate public URL
-    if (item.thumbnail_url.includes('/')) {
-      const { data } = supabase.storage
-        .from('content-media')
-        .getPublicUrl(item.thumbnail_url)
-      return data.publicUrl
-    }
-  }
-  
-  // Handle external_url for images
-  if (item.content_type === 'image' && item.external_url) {
-    // If it's already a full URL, use it
-    if (item.external_url.startsWith('http')) {
-      return item.external_url
-    }
-    // If it's a storage path, generate public URL
-    if (item.external_url.includes('/')) {
-      const { data } = supabase.storage
-        .from('content-media')
-        .getPublicUrl(item.external_url)
-      return data.publicUrl
-    }
-  }
-  
-  return null
-}
+    setShowControls(true);
+    setTimeout(() => setShowControls(false), 3000);
+  };
 
-const renderMediaContent = (item: any) => {
-  const mediaUrl = getThumbnailUrl(item)
-  
-  if (!mediaUrl) {
-    return (
-      <div className="w-full h-full bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="text-8xl mb-4">{getContentEmoji(item.content_type)}</div>
-          <div className="text-4xl font-bold opacity-20">{item.title.charAt(0).toUpperCase()}</div>
-        </div>
-      </div>
-    )
-  }
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setIsMuted(video.muted);
+    setShowControls(true);
+    setTimeout(() => setShowControls(false), 3000);
+  };
 
-  if (item.content_type === 'video') {
-    return (
-      <video
-        src={mediaUrl}
-        className="w-full h-full object-cover"
-        autoPlay
-        muted
-        loop
-        playsInline
-        onError={(e) => {
-          const target = e.target as HTMLVideoElement
-          target.style.display = 'none'
-          const parent = target.parentElement
-          if (parent) {
-            parent.innerHTML = `
-              <div class="w-full h-full bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 flex items-center justify-center">
-                <div class="text-center text-white">
-                  <div class="text-8xl mb-4">🎬</div>
-                  <div class="text-4xl font-bold opacity-20">${item.title.charAt(0).toUpperCase()}</div>
-                </div>
-              </div>
-            `
-          }
-        }}
-      />
-    )
-  }
+  const onTimeUpdate = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    setCurrentTime(video.currentTime);
+    setProgress((video.currentTime / video.duration) * 100);
+  };
 
-  // For images
-  return (
-    <img
-      src={mediaUrl}
-      alt={item.title}
-      className="w-full h-full object-cover"
-      onError={(e) => {
-        const target = e.target as HTMLImageElement
-        target.style.display = 'none'
-        const parent = target.parentElement
-        if (parent) {
-          parent.innerHTML = `
-            <div class="w-full h-full bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 flex items-center justify-center">
-              <div class="text-center text-white">
-                <div class="text-8xl mb-4">${getContentEmoji(item.content_type)}</div>
-                <div class="text-4xl font-bold opacity-20">${item.title.charAt(0).toUpperCase()}</div>
-              </div>
-            </div>
-          `
-        }
-      }}
-    />
-  )
-}
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const video = videoRef.current;
+    if (!video) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    video.currentTime = pos * video.duration;
+  };
 
-const FeedItem = ({ item, isActive, onLike, onUserClick }) => {
-  const [isMuted, setIsMuted] = useState(true)
-  const [isLiked, setIsLiked] = useState(item.user_has_liked || false)
-  const [likeCount, setLikeCount] = useState(item.likes_count || 0)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const { ref, inView } = useInView({
-    threshold: 0.8,
-    triggerOnce: false
-  })
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
 
   useEffect(() => {
-    if (!videoRef.current) return
-    
-    if (inView && isActive) {
-      videoRef.current.play().catch(e => console.log('Autoplay prevented:', e))
-      setIsPlaying(true)
-    } else {
-      videoRef.current.pause()
-      setIsPlaying(false)
-    }
-  }, [inView, isActive])
+    const video = videoRef.current;
+    if (!video) return;
 
-  const handleLike = () => {
-    const newLikeStatus = !isLiked
-    setIsLiked(newLikeStatus)
-    setLikeCount(prev => newLikeStatus ? prev + 1 : Math.max(0, prev - 1))
-    onLike(item.id, !isLiked)
-  }
+    const handleLoadedMetadata = () => setDuration(video.duration);
+    const handleEnded = () => setIsPlaying(false);
 
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted
-      setIsMuted(!isMuted)
-    }
-  }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            if (video.paused) {
+              video
+                .play()
+                .then(() => {
+                  setIsPlaying(true);
+                  video.muted = true;
+                  setIsMuted(true);
+                })
+                .catch(() => {});
+            }
+          } else {
+            if (!video.paused) {
+              video.pause();
+              setIsPlaying(false);
+            }
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(video);
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('ended', handleEnded);
+
+    return () => {
+      observer.disconnect();
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('ended', handleEnded);
+    };
+  }, []);
 
   return (
-    <div 
-      ref={ref}
-      className={`relative w-full h-screen flex items-center justify-center bg-black ${!isActive ? 'opacity-50' : ''}`}
+    <div
+      className={`relative w-full overflow-hidden rounded-lg ${className}`}
+      onMouseMove={() => setShowControls(true)}
+      onMouseLeave={() => setShowControls(false)}
     >
-      {/* Video/Image Content */}
-      <div className="absolute inset-0 w-full h-full">
-        {renderMediaContent(item)}
-      </div>
-
-      {/* Overlay Gradient */}
-      <div className="absolute bottom-0 left-0 w-full h-1/3 bg-gradient-to-t from-black/80 to-transparent" />
-
-      {/* Content Info */}
-      <div className="absolute bottom-0 left-0 w-full p-6 text-white z-10">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center mb-4">
-            <button 
-              onClick={() => onUserClick(item.profiles)}
-              className="flex items-center"
-            >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold mr-3">
-                {getInitials(item.profiles?.username || 'U')}
-              </div>
-              <span className="font-bold">@{item.profiles?.username || 'user'}</span>
-            </button>
-            <button className="ml-4 px-4 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium hover:bg-white/30 transition-colors">
-              Follow
-            </button>
-          </div>
-          
-          <p className="text-lg mb-4 line-clamp-2">{item.description || 'Check out this amazing content!'}</p>
-          
-          <div className="flex items-center space-x-4 text-sm text-white/80">
-            <div className="flex items-center">
-              <Music className="w-4 h-4 mr-1" />
-              <span>Original Sound</span>
-            </div>
-            <div>{formatDate(item.created_at)}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Side Actions */}
-      <div className="absolute right-4 bottom-24 flex flex-col items-center space-y-6">
-        <div className="flex flex-col items-center">
-          <button 
-            onClick={handleLike}
-            className="flex flex-col items-center group"
-          >
-            <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/20 transition-colors">
-              <Heart 
-                className={`w-6 h-6 ${isLiked ? 'fill-red-500 text-red-500' : 'text-white'}`} 
-              />
-            </div>
-            <span className="text-xs mt-1 text-white">{formatNumber(likeCount)}</span>
-          </button>
-        </div>
-
-        <div className="flex flex-col items-center">
-          <button className="flex flex-col items-center group">
-            <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/20 transition-colors">
-              <MessageSquare className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xs mt-1 text-white">{item.comments_count || 0}</span>
-          </button>
-        </div>
-
-        <div className="flex flex-col items-center">
-          <button className="flex flex-col items-center group">
-            <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/20 transition-colors">
-              <Share2 className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xs mt-1 text-white">Share</span>
-          </button>
-        </div>
-
-        <button 
-          onClick={toggleMute}
-          className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
-        >
-          {isMuted ? (
-            <VolumeX className="w-5 h-5 text-white" />
-          ) : (
-            <Volume2 className="w-5 h-5 text-white" />
-          )}
-        </button>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-white/20">
-        <motion.div 
-          className="h-full bg-white"
-          initial={{ width: '0%' }}
-          animate={{ width: isPlaying ? '100%' : '0%' }}
-          transition={{ duration: 15, ease: 'linear' }}
+      {src ? (
+        <video
+          ref={videoRef}
+          src={src}
+          className="w-full h-auto max-h-[80vh] object-contain cursor-pointer bg-transparent"
+          onClick={togglePlayPause}
+          loop
+          muted={isMuted}
+          playsInline
+          poster={thumbnail || undefined}
+          preload="metadata"
+          title={title}
         />
+      ) : (
+        <div className="flex items-center justify-center h-full text-gray-500">
+          Video not available
+        </div>
+      )}
+
+      {!isPlaying && (
+        <div
+          className="absolute inset-0 flex items-center justify-center cursor-pointer"
+          onClick={togglePlayPause}
+        >
+          <div className="p-4 rounded-2xl bg-black/40 backdrop-blur-lg border border-white/10 shadow-lg">
+            <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`absolute bottom-0 left-0 right-0 px-4 pb-3 transition-all duration-300 ${
+          showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="bg-black/50 backdrop-blur-lg rounded-lg p-3 shadow-xl border border-white/10">
+          <div
+            className="w-full h-1.5 bg-gray-700/50 rounded-full mb-2 cursor-pointer overflow-hidden"
+            onClick={handleSeek}
+          >
+            <div
+              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full relative"
+              style={{ width: `${progress}%` }}
+            >
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full transform translate-x-1/2 shadow" />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <button onClick={togglePlayPause} className="p-2 hover:bg-white/10 rounded-full">
+                {isPlaying ? (
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M10 20h4V4h-4v16zm-6 0h4V4H4v16z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+              </button>
+              <div className="text-xs font-medium text-white/90">
+                {formatTime(currentTime)} / {formatTime(duration)}
+              </div>
+            </div>
+
+            <button onClick={toggleMute} className="p-2 hover:bg-white/10 rounded-full">
+              {isMuted ? (
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 4L2.86 5.41 7 9.56v2.09c-.61-.21-1.25-.33-1.92-.33-2.76 0-5.08 2.24-5.08 5s2.32 5 5.08 5c1.34 0 2.57-.5 3.52-1.34l1.5 1.5C13.37 21.5 12 22 10.5 22 5.81 22 2 18.19 2 13.5c0-1.76.49-3.4 1.34-4.8L4.27 4zM10.5 17c-1.94 0-3.5-1.57-3.5-3.5v-.5l4.54 4.54c-.4.24-.85.46-1.34.46z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-const formatNumber = (num: number): string => {
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M'
-  } else if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'K'
-  }
-  return num.toString()
-}
+/* -------------------- ContentTab -------------------- */
+const CONTENT_TYPES = {
+  video: { label: 'Video', emoji: '🎥' },
+  audio: { label: 'Audio', emoji: '🎧' },
+  image: { label: 'Image', emoji: '🖼️' },
+  article: { label: 'Article', emoji: '📝' },
+} as const;
 
-export function ContentTab() {
-  const [activeFilter, setActiveFilter] = useState<ContentFilters>('all')
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [selectedUser, setSelectedUser] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [activeIndex, setActiveIndex] = useState(0)
-  const { content, loading, error, likeContent, loadMoreContent } = useContent(activeFilter, 10, page)
+const ContentTab: React.FC = () => {
+  const [content, setContent] = useState<FetchedContentPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'video':
-        return <Play className="w-5 h-5" />
-      case 'audio':
-        return <Music className="w-5 h-5" />
-      case 'article':
-        return <FileText className="w-5 h-5" />
-      default:
-        return <ImageIcon className="w-5 h-5" />
+  const {
+    content: fetchedContent,
+    loading: isLoading,
+    error,
+    likeContent,
+    refetch,
+  } = useContent();
+
+  useEffect(() => {
+    if (fetchedContent) setContent(fetchedContent);
+  }, [fetchedContent]);
+
+  useEffect(() => {
+    setLoading(isLoading);
+  }, [isLoading]);
+
+  const handleLike = async (id: string) => {
+    const result = await likeContent(id);
+    if (!result?.error) {
+      setContent((prev) =>
+        prev.map((post) =>
+          post.id === id
+            ? {
+                ...post,
+                user_has_liked: !post.user_has_liked,
+                like_count: post.user_has_liked
+                  ? Math.max(post.like_count - 1, 0)
+                  : post.like_count + 1,
+              }
+            : post
+        )
+      );
     }
-  }
+  };
 
-  // Handle loading and error states
-  if (loading && content.length === 0) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-black">
-        <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500" />
       </div>
-    )
+    );
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-black text-white">
-        <div className="text-center p-6 max-w-md">
-          <div className="text-4xl mb-4">😕</div>
-          <h3 className="text-xl font-bold mb-2">Something went wrong</h3>
-          <p className="text-white/70 mb-6">We couldn't load the content. Please try again later.</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-white text-black rounded-full font-medium hover:bg-white/90 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Handle empty state
-  if (content.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-black text-white text-center p-6">
-        <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center mb-6">
-          <Plus className="w-12 h-12 text-white/70" />
-        </div>
-        <h2 className="text-2xl font-bold mb-2">No content yet</h2>
-        <p className="text-white/70 mb-6 max-w-md">Be the first to create and share amazing content with the community!</p>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-medium hover:opacity-90 transition-opacity flex items-center"
-        >
-          Create your first post
-        </button>
-      </div>
-    )
+    return <div className="text-center py-8 text-red-500">Error loading content.</div>;
   }
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-black">
-      {/* Main Feed */}
-      <div className="h-full overflow-y-auto snap-y snap-mandatory scrollbar-hide">
-        <AnimatePresence>
-          {content.map((item, index) => (
-            <FeedItem
-              key={item.id}
-              item={item}
-              isActive={activeIndex === index}
-              onLike={likeContent}
-              onUserClick={setSelectedUser}
-            />
-          ))}
-        </AnimatePresence>
-
-        {/* Load more indicator */}
-        {hasMore && (
-          <div className="h-screen flex items-center justify-center">
-            <div className="animate-pulse flex flex-col items-center">
-              <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
-              <p className="mt-4 text-white/70">Loading more content...</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Top Navigation */}
-      <div className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent">
-        <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
-          {['For You', 'Following', 'Trending', 'Music', 'Gaming', 'News'].map((tab) => (
-            <button
-              key={tab}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
-                activeFilter === tab.toLowerCase()
-                  ? 'bg-white text-black'
-                  : 'text-white hover:bg-white/10'
-              }`}
-              onClick={() => setActiveFilter(tab.toLowerCase() as ContentFilters)}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+    <div className="relative min-h-screen">
+      <div className="relative w-full max-w-4xl mx-auto px-4 py-8 space-y-8">
+        <h1 className="text-2xl font-bold text-white mb-6">Content Feed</h1>
         
-        <button className="p-2 text-white hover:bg-white/10 rounded-full">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
-      </div>
+        {/* FAB */}
+        <div className="fixed bottom-8 right-8">
+          <div className="relative w-14 h-14">
+            {/* Button */}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="absolute inset-0 w-full h-full rounded-full bg-gradient-to-br from-purple-600/90 to-pink-500/90 backdrop-blur-lg border border-white/10 shadow-2xl flex items-center justify-center text-white hover:scale-105 transform transition-all duration-200 z-10"
+              aria-label="Create new post"
+            >
+              <Plus className="w-6 h-6" />
+            </button>
+            {/* Centered Pulse Animation */}
+            <span className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-600/30 to-pink-500/30 blur-xl animate-ping z-0" />
+          </div>
+        </div>
 
-      {/* Create Button */}
-      <button
-        onClick={() => setShowCreateModal(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg hover:scale-105 transition-transform z-30"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
+        <div className="w-full flex flex-col items-center space-y-6">
+          {content.map((item) => {
+            const hasLiked = item.user_has_liked ?? false;
 
-      {/* Modals */}
-      <AnimatePresence>
-        {showCreateModal && (
-          <CreateContentModal
-            isOpen={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
-          />
-        )}
+            return (
+              <ContentGlassCard
+                key={item.id}
+                className="overflow-hidden w-full max-w-2xl"
+              >
+                <div className="p-6 flex flex-col gap-4">
+                  {/* User Info */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-medium text-sm overflow-hidden">
+                      {item.creator_avatar ? (
+                        <img
+                          src={item.creator_avatar}
+                          alt={item.creator_name || 'User'}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        getInitials(item.creator_name || '?')
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white truncate">{item.creator_name}</p>
+                      <div className="flex items-center text-xs text-gray-300 space-x-2">
+                        <span>{formatDate(item.created_at)}</span>
+                        <span className="text-white/50">•</span>
+                        <span className="inline-flex items-center">
+                          {CONTENT_TYPES[item.content_type].emoji}
+                          <span className="ml-1">{CONTENT_TYPES[item.content_type].label}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-        {selectedUser && (
-          <UserProfileModal
-            user={selectedUser}
-            isOpen={!!selectedUser}
-            onClose={() => setSelectedUser(null)}
-          />
-        )}
-      </AnimatePresence>
+                  {/* Title */}
+                  <h3 className="text-lg font-semibold text-white mt-1">
+                    {item.title}
+                  </h3>
 
-      {/* Scroll indicator */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full z-20">
-        Swipe up for more
+                  {/* Media */}
+                  <div className="relative overflow-hidden rounded-xl bg-black/20 backdrop-blur-sm">
+                    {item.content_type === 'video' ? (
+                      <VideoPlayer
+                        src={item.external_url}
+                        thumbnail={item.thumbnail_url}
+                        title={item.title}
+                        className="w-full"
+                      />
+                    ) : item.thumbnail_url ? (
+                      <img
+                        src={item.thumbnail_url}
+                        alt={item.title}
+                        className="w-full h-auto max-h-[70vh] object-contain mx-auto"
+                      />
+                    ) : null}
+                  </div>
+
+                  {/* Description */}
+                  {item.description && (
+                    <p className="text-gray-300 text-sm leading-relaxed">
+                      {item.description}
+                    </p>
+                  )}
+
+                  {/* Interaction Bar */}
+                  <div className="flex items-center justify-between mt-2 pt-3 border-t border-white/10">
+                    <div className="flex items-center space-x-4">
+                      <button
+                        onClick={() => handleLike(item.id)}
+                        className={`flex items-center space-x-1.5 hover:text-pink-400 transition-colors ${
+                          item.user_has_liked ? 'text-pink-500' : 'text-gray-400'
+                        }`}
+                      >
+                        <Heart 
+                          className={`w-5 h-5 ${item.user_has_liked ? 'fill-current' : ''}`} 
+                        />
+                        <span className="text-sm">{item.like_count || 0}</span>
+                      </button>
+                      <button className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors">
+                        <MessageSquare className="w-5 h-5" />
+                        <span className="text-sm">{(item as any).comment_count || 0}</span>
+                      </button>
+                      <button className="text-gray-400 hover:text-green-400 transition-colors">
+                        <Share2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <span className="text-xs bg-white/10 text-white/80 px-2.5 py-1 rounded-full">
+                      {item.view_count} {item.view_count === 1 ? 'view' : 'views'}
+                    </span>
+                  </div>
+                </div>
+              </ContentGlassCard>
+            );
+          })}
+        </div>
+
+        <CreateContentModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onContentCreated={() => {
+            refetch();
+            setShowCreateModal(false);
+          }}
+        />
+        <UserProfileModal
+          user={selectedUser}
+          isOpen={!!selectedUser}
+          onClose={() => setSelectedUser(null)}
+        />
       </div>
     </div>
-  )
-}
+  );
+};
+
+export default ContentTab;

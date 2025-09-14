@@ -1,13 +1,15 @@
-import React, { useState } from 'react'
-import { ChevronLeft, ChevronRight, Check, User, Users, MapPin, Sparkles, Camera, Settings } from 'lucide-react'
-import { Button } from './ui/Button'
-import { Card, CardContent, CardHeader } from './ui/Card'
-import { Badge } from './ui/Badge'
-import { useProfile } from '../hooks/useProfile'
-import { CREATOR_ROLES, CREATIVE_TAGS } from '../lib/utils'
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, ChevronLeft, ChevronRight, Check, User, Users, MapPin, Sparkles, Camera, Settings, ArrowRight } from 'lucide-react';
+import { OnboardingGlassCard } from './ui/GlassCard';
+import { useProfile } from '../hooks/useProfile';
+import { CREATOR_ROLES, CREATIVE_TAGS } from '../lib/utils';
+import { cn } from '../lib/utils';
 
 interface OnboardingWizardProps {
-  onComplete: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  onComplete: () => void;
 }
 
 interface ProfileData {
@@ -23,7 +25,7 @@ interface ProfileData {
   nsfw_preference: boolean
 }
 
-export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWizardProps) {
   const { createProfile } = useProfile()
   const [currentStep, setCurrentStep] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -41,13 +43,41 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   })
 
   const steps = [
-    { title: 'Basic Info', icon: User },
-    { title: 'Your Roles', icon: Camera },
-    { title: 'Skills & Interests', icon: Sparkles },
-    { title: 'Looking For', icon: Users },
-    { title: 'Creative Vibe', icon: Sparkles },
-    { title: 'Location', icon: MapPin },
-    { title: 'Preferences', icon: Settings },
+    { 
+      title: 'Basic Info', 
+      icon: User,
+      description: 'Tell us your name and choose a unique username'
+    },
+    { 
+      title: 'Your Roles', 
+      icon: Camera,
+      description: 'Select all the roles that describe you'
+    },
+    { 
+      title: 'Skills & Interests', 
+      icon: Sparkles,
+      description: 'What specific skills do you bring?'
+    },
+    { 
+      title: 'Looking For', 
+      icon: Users,
+      description: 'Select the types of creators you\'d like to collaborate with'
+    },
+    { 
+      title: 'Creative Vibe', 
+      icon: Sparkles,
+      description: 'Choose words that describe your creative style'
+    },
+    { 
+      title: 'Location', 
+      icon: MapPin,
+      description: 'This helps us show you relevant local collaborations'
+    },
+    { 
+      title: 'Preferences', 
+      icon: Settings,
+      description: 'Set your content preferences'
+    },
   ]
 
   const updateProfileData = (updates: Partial<ProfileData>) => {
@@ -81,19 +111,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   }
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1)
-    }
-  }
-
-  const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
-
-  const handleComplete = async () => {
+  const handleSubmit = async () => {
     setLoading(true)
     try {
       const { error } = await createProfile(profileData)
@@ -111,40 +129,49 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   }
 
-  const renderStep = () => {
-    switch (currentStep) {
+  const renderStep = (step: number) => {
+    const stepClasses = 'space-y-6 py-2';
+    const inputClasses = 'w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all text-white placeholder-gray-400';
+    const labelClasses = 'block text-sm font-medium text-purple-200 mb-2';
+    const buttonBaseClasses = 'px-4 py-2 rounded-xl transition-all duration-200';
+    const buttonActiveClasses = 'bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white border border-purple-500/30';
+    const buttonInactiveClasses = 'bg-white/5 hover:bg-white/10 text-gray-300';
+    const cardClasses = 'bg-gradient-to-br from-gray-900/70 via-gray-900/60 to-purple-900/20 border border-purple-900/30 hover:border-purple-800/50';
+    const activeTextGradient = 'bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent';
+
+    switch (step) {
       case 0:
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <User className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Let's get to know you</h2>
-              <p className="text-gray-600">Tell us your name and choose a unique username</p>
+              <User className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+              <h2 className={`text-2xl font-bold mb-2 ${activeTextGradient}`}>Let's get to know you</h2>
+              <p className="text-purple-200/80">Tell us your name and choose a unique username</p>
             </div>
-            
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className={labelClasses}>
                   Full Name
                 </label>
                 <input
                   type="text"
                   value={profileData.full_name}
                   onChange={(e) => updateProfileData({ full_name: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className={inputClasses}
                   placeholder="Your full name"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className={labelClasses}>
                   Username
                 </label>
                 <input
                   type="text"
                   value={profileData.username}
                   onChange={(e) => updateProfileData({ username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className={inputClasses}
                   placeholder="your_username"
                 />
                 <p className="text-xs text-gray-500 mt-1">Only lowercase letters, numbers, and underscores</p>
@@ -157,11 +184,11 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <Camera className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">What do you create?</h2>
-              <p className="text-gray-600">Select all the roles that describe you</p>
+              <Camera className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+              <h2 className={`text-2xl font-bold mb-2 ${activeTextGradient}`}>What do you create?</h2>
+              <p className="text-purple-200/80">Select all the roles that describe you</p>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3">
               {CREATOR_ROLES.map((role) => (
                 <button
@@ -169,8 +196,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   onClick={() => updateProfileData({ roles: toggleArrayItem(profileData.roles, role) })}
                   className={`p-3 rounded-xl text-sm font-medium transition-all ${
                     profileData.roles.includes(role)
-                      ? 'bg-purple-100 text-purple-800 border-2 border-purple-300'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-transparent'
+                      ? 'bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white border border-purple-400/50 shadow-lg shadow-purple-900/20'
+                      : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700/50 hover:border-purple-500/30'
                   }`}
                 >
                   {role}
@@ -184,16 +211,16 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <Sparkles className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Your creative skills</h2>
-              <p className="text-gray-600">What specific skills do you bring? (Optional)</p>
+              <Sparkles className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+              <h2 className={`text-2xl font-bold mb-2 ${activeTextGradient}`}>Your creative skills</h2>
+              <p className="text-purple-200/80">What specific skills do you bring? (Optional)</p>
             </div>
-            
+
             <div className="space-y-4">
               <input
                 type="text"
                 placeholder="Add a skill and press Enter"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className={inputClasses}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     const skill = e.currentTarget.value.trim()
@@ -204,17 +231,16 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   }
                 }}
               />
-              
+
               <div className="flex flex-wrap gap-2">
                 {profileData.skills.map((skill) => (
-                  <Badge
+                  <button
                     key={skill}
-                    variant="secondary"
-                    className="cursor-pointer hover:bg-red-100 hover:text-red-800"
                     onClick={() => updateProfileData({ skills: profileData.skills.filter(s => s !== skill) })}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all bg-gray-800/50 text-gray-200 hover:bg-gray-700/70 border border-gray-700/50 hover:border-purple-500/30`}
                   >
                     {skill} ×
-                  </Badge>
+                  </button>
                 ))}
               </div>
             </div>
@@ -225,11 +251,11 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <Users className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Who do you want to work with?</h2>
-              <p className="text-gray-600">Select the types of creators you'd like to collaborate with</p>
+              <Users className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+              <h2 className={`text-2xl font-bold mb-2 ${activeTextGradient}`}>Who do you want to work with?</h2>
+              <p className="text-purple-200/80">Select the types of creators you'd like to collaborate with</p>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3">
               {CREATOR_ROLES.map((role) => (
                 <button
@@ -237,8 +263,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   onClick={() => updateProfileData({ looking_for: toggleArrayItem(profileData.looking_for, role) })}
                   className={`p-3 rounded-xl text-sm font-medium transition-all ${
                     profileData.looking_for.includes(role)
-                      ? 'bg-purple-100 text-purple-800 border-2 border-purple-300'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-transparent'
+                      ? 'bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white border border-purple-400/50 shadow-lg shadow-purple-900/20'
+                      : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700/50 hover:border-purple-500/30'
                   }`}
                 >
                   {role}
@@ -252,21 +278,21 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <Sparkles className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">What's your creative vibe?</h2>
-              <p className="text-gray-600">Choose words that describe your creative style</p>
+              <Sparkles className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+              <h2 className={`text-2xl font-bold mb-2 ${activeTextGradient}`}>What's your creative vibe?</h2>
+              <p className="text-purple-200/80">Choose words that describe your creative style</p>
             </div>
-            
+
             <div>
               <textarea
                 value={profileData.tagline}
                 onChange={(e) => updateProfileData({ tagline: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent mb-4"
+                className={inputClasses}
                 placeholder="Write a short tagline about yourself..."
                 rows={3}
               />
             </div>
-            
+
             <div className="grid grid-cols-3 gap-2">
               {CREATIVE_TAGS.map((word) => (
                 <button
@@ -274,8 +300,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   onClick={() => updateProfileData({ vibe_words: toggleArrayItem(profileData.vibe_words, word) })}
                   className={`p-2 rounded-lg text-sm font-medium transition-all ${
                     profileData.vibe_words.includes(word)
-                      ? 'bg-purple-100 text-purple-800 border-2 border-purple-300'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-transparent'
+                      ? 'bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white border border-purple-400/50 shadow-lg shadow-purple-900/20'
+                      : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700/50 hover:border-purple-500/30'
                   }`}
                 >
                   {word}
@@ -289,32 +315,32 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <MapPin className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Where are you based?</h2>
-              <p className="text-gray-600">This helps us show you relevant local collaborations</p>
+              <MapPin className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+              <h2 className={`text-2xl font-bold mb-2 ${activeTextGradient}`}>Where are you based?</h2>
+              <p className="text-purple-200/80">This helps us show you relevant local collaborations</p>
             </div>
-            
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className={labelClasses}>
                   Location
                 </label>
                 <input
                   type="text"
                   value={profileData.location}
                   onChange={(e) => updateProfileData({ location: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className={inputClasses}
                   placeholder="City, Country"
                 />
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   id="remote"
                   checked={profileData.is_remote}
                   onChange={(e) => updateProfileData({ is_remote: e.target.checked })}
-                  className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                  className="w-4 h-4 text-purple-400 rounded focus:ring-purple-500 bg-gray-700 border-gray-600"
                 />
                 <label htmlFor="remote" className="text-sm text-gray-700">
                   I'm open to remote collaborations
@@ -328,26 +354,26 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <Settings className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Final preferences</h2>
-              <p className="text-gray-600">Set your content preferences</p>
+              <Settings className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+              <h2 className={`text-2xl font-bold mb-2 ${activeTextGradient}`}>Final preferences</h2>
+              <p className="text-purple-200/80">Set your content preferences</p>
             </div>
-            
+
             <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-xl">
+              <div className="p-4 bg-gray-800/30 rounded-xl border border-white/5">
                 <div className="flex items-center gap-3 mb-2">
                   <input
                     type="checkbox"
                     id="nsfw"
                     checked={profileData.nsfw_preference}
                     onChange={(e) => updateProfileData({ nsfw_preference: e.target.checked })}
-                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                    className="w-4 h-4 text-purple-400 rounded focus:ring-purple-500 bg-gray-700 border-gray-600"
                   />
-                  <label htmlFor="nsfw" className="text-sm font-medium text-gray-900">
+                  <label htmlFor="nsfw" className="text-sm font-medium text-purple-200">
                     Show NSFW content
                   </label>
                 </div>
-                <p className="text-xs text-gray-600 ml-7">
+                <p className="text-xs text-purple-200/60 ml-7">
                   This includes explicit or adult-oriented creative projects. You can change this later in settings.
                 </p>
               </div>
@@ -360,86 +386,69 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-cyan-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          {/* Progress Bar */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              {steps.map((step, index) => (
-                <div
-                  key={index}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
-                    index < currentStep
-                      ? 'bg-green-500 text-white'
-                      : index === currentStep
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-200 text-gray-500'
-                  }`}
-                >
-                  {index < currentStep ? <Check className="w-4 h-4" /> : index + 1}
-                </div>
-              ))}
-            </div>
-            <span className="text-sm text-gray-500">
-              {currentStep + 1} of {steps.length}
-            </span>
-          </div>
-          
-          <h1 className="text-sm font-medium text-purple-600 text-center">
-            {steps[currentStep].title}
-          </h1>
-        </CardHeader>
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
 
-        <CardContent>
-          {renderStep()}
-          
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              disabled={currentStep === 0}
-              className="flex items-center gap-2"
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+      >
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+        
+        <OnboardingGlassCard
+          title={steps[currentStep].title}
+          description={steps[currentStep].description}
+          currentStep={currentStep + 1}
+          totalSteps={steps.length}
+          onClose={onClose}
+          onBack={currentStep > 0 ? () => setCurrentStep(currentStep - 1) : undefined}
+          onNext={currentStep < steps.length - 1 ? () => setCurrentStep(currentStep + 1) : handleSubmit}
+          className="w-full max-w-2xl max-h-[90vh] overflow-hidden"
+          hideNavigation={loading}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="py-2"
             >
-              <ChevronLeft className="w-4 h-4" />
-              Back
-            </Button>
-            
-            {currentStep === steps.length - 1 ? (
-              <Button
-                variant="primary"
-                onClick={handleComplete}
-                disabled={!canProceed() || loading}
-                className="flex items-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Creating Profile...
-                  </>
-                ) : (
-                  <>
-                    Complete Setup
-                    <Check className="w-4 h-4" />
-                  </>
-                )}
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                onClick={handleNext}
-                disabled={!canProceed()}
-                className="flex items-center gap-2"
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-purple-200/80">Saving your profile...</p>
+                </div>
+              ) : (
+                renderStep(currentStep)
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </OnboardingGlassCard>
+      </motion.div>
+    </AnimatePresence>
   )
 }

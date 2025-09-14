@@ -1,7 +1,9 @@
-import React, { useState } from 'react'
-import { X, Mail, Lock, User, CheckCircle, AlertCircle } from 'lucide-react'
-import { Button } from './ui/Button'
-import { useAuth } from '../hooks/useAuth'
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Mail, Lock, CheckCircle, AlertCircle, ArrowRight, User as UserIcon } from 'lucide-react';
+import { AuthGlassCard } from './ui/GlassCard';
+import { useAuth } from '../hooks/useAuth';
+import { cn } from '../lib/utils';
 
 interface AuthModalProps {
   isOpen: boolean
@@ -20,7 +22,24 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, onSuccess }: Au
   
   const { signIn, signUp } = useAuth()
 
-  if (!isOpen) return null
+  // Close on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -80,119 +99,150 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, onSuccess }: Au
     }
   }
 
-  const resetForm = () => {
-    setEmail('')
-    setPassword('')
-    setError('')
-    setSuccess('')
-  }
-
-  const handleModeChange = (newMode: 'signin' | 'signup') => {
-    resetForm()
-    onModeChange(newMode)
-  }
+  // Form reset is handled by individual state setters when needed
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {mode === 'signup' ? 'Join Unhinged' : 'Welcome Back'}
-          </h2>
-          <button
-            onClick={() => {
-              resetForm()
-              onClose()
-            }}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="relative w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
           >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {success && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <p className="text-green-800 text-sm">{success}</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-red-800 text-sm">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="your@email.com"
-                required
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="••••••••"
-                required
-                minLength={6}
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            className="w-full"
-            disabled={loading}
-          >
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                {mode === 'signup' ? 'Creating Account...' : 'Signing In...'}
-              </div>
-            ) : (
-              mode === 'signup' ? 'Create Account' : 'Sign In'
-            )}
-          </Button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
-            {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}
-            <button
-              onClick={() => handleModeChange(mode === 'signup' ? 'signin' : 'signup')}
-              className="ml-2 text-purple-600 hover:text-purple-700 font-medium"
-              disabled={loading}
+            <AuthGlassCard 
+              title={mode === 'signin' ? 'Welcome back' : 'Create an account'}
+              onClose={onClose}
+              className="relative overflow-visible"
             >
-              {mode === 'signup' ? 'Sign In' : 'Sign Up'}
-            </button>
-          </p>
+              <p className="text-gray-300 text-sm text-center mb-6">
+                {mode === 'signin' 
+                  ? 'Sign in to continue to your account' 
+                  : 'Get started with your free account'}
+              </p>
+              {error && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {success && (
+                <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-300 text-sm flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{success}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-4">
+                  <div>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="email"
+                        id="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+                        placeholder="Email address"
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="password"
+                        id="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+                        placeholder={mode === 'signin' ? 'Password' : 'Create a password'}
+                        minLength={mode === 'signup' ? 6 : undefined}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    {mode === 'signin' && (
+                      <div className="mt-1.5 flex justify-end">
+                        <button
+                          type="button"
+                          className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                          onClick={() => {}}
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <motion.button
+                    type="submit"
+                    className={cn(
+                      'w-full py-3 px-4 rounded-xl font-medium text-white bg-gradient-to-r from-purple-600 to-pink-600',
+                      'hover:shadow-lg hover:shadow-purple-500/20 transition-all flex items-center justify-center',
+                      'focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:ring-offset-2 focus:ring-offset-gray-900',
+                      'disabled:opacity-70 disabled:pointer-events-none'
+                    )}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        {mode === 'signin' ? 'Signing in...' : 'Creating account...'}
+                      </>
+                    ) : (
+                      <>
+                        <span>{mode === 'signin' ? 'Sign in' : 'Create account'}</span>
+                        <ArrowRight className="ml-2 w-4 h-4" />
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </form>
+
+              <div className="mt-6 pt-5 border-t border-white/10">
+                <p className="text-center text-sm text-gray-400">
+                  {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+                  <button
+                    type="button"
+                    onClick={() => onModeChange(mode === 'signin' ? 'signup' : 'signin')}
+                    className="text-purple-400 hover:text-purple-300 font-medium transition-colors"
+                    disabled={loading}
+                  >
+                    {mode === 'signin' ? 'Sign up' : 'Sign in'}
+                  </button>
+                </p>
+              </div>
+            </AuthGlassCard>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   )
 }

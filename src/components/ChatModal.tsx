@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { X, Send, Loader2, Paperclip, Image, Video, FileX } from 'lucide-react'
+import { Send, Loader2, Paperclip, Image, Video } from 'lucide-react'
 import { Button } from './ui/Button'
 import { useChat } from '../hooks/useChat'
 import { useAuth } from '../hooks/useAuth'
-import { formatDate, getInitials } from '../lib/utils'
+import { formatDate } from '../lib/utils'
 import { supabase } from '../lib/supabase'
+import { ChatGlassCard, ChatBubbleGlassCard } from './ui/GlassCard'
 
 interface ChatModalProps {
   isOpen: boolean
@@ -190,29 +191,48 @@ export function ChatModal({ isOpen, onClose, chatId }: ChatModalProps) {
     return <p className="text-sm whitespace-pre-wrap">{content}</p>
   }
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-[60] flex">
-      <div className="bg-white w-full h-full flex flex-col md:rounded-none lg:m-4 lg:rounded-2xl lg:shadow-xl lg:max-w-6xl lg:max-h-[90vh] lg:mx-auto lg:my-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 lg:p-6 border-b border-gray-200 flex-shrink-0">
-          <div>
-            <h2 className="text-lg lg:text-xl font-semibold text-gray-900">
-              {chat?.project?.title || 'Chat'}
-            </h2>
-            <p className="text-sm lg:text-base text-gray-600">
-              {chatId ? `Chat ID: ${chatId.slice(0, 8)}...` : 'Collaboration Chat'}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  // Get the chat title from the chat object
+  const chatTitle = chat?.project?.title || 'Chat';
 
+  // Handle message submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || sending || !chatId) return;
+    
+    const messageToSend = newMessage.trim();
+    setNewMessage('');
+    
+    try {
+      await sendMessage(messageToSend);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setNewMessage(messageToSend);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex flex-col p-0 w-full h-full">
+      {/* Full-width overlay */}
+      {/* Overlay removed to show through to content */}
+
+      {/* Full-width container with glass effect */}
+      <div className="relative w-full h-full">
+        <div 
+          className="absolute inset-0 -z-10 bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-sm"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+        <ChatGlassCard 
+          className="w-full h-full flex flex-col bg-gradient-to-br from-gray-900/70 to-gray-800/70 backdrop-blur-xl"
+          onClose={onClose}
+          title={chatTitle}
+          borderRadius={0}
+        >
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 w-full">
+          <div className="max-w-4xl mx-auto w-full p-4 sm:p-6 space-y-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
@@ -237,152 +257,138 @@ export function ChatModal({ isOpen, onClose, chatId }: ChatModalProps) {
               const isMyMessage = message.sender_id === user?.id
               
               return (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 lg:gap-4 ${isMyMessage ? 'flex-row-reverse' : 'flex-row'}`}
-                >
-                  {/* Avatar */}
-                  <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-white shadow-lg flex items-center justify-center border-2 border-white flex-shrink-0">
-                    {message.sender.avatar_url ? (
-                      <img
-                        src={message.sender.avatar_url}
-                        alt={message.sender.full_name}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-xs lg:text-sm font-bold text-gray-600">
-                        {getInitials(message.sender.full_name)}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Message */}
-                  <div className={`flex-1 max-w-xs lg:max-w-md ${isMyMessage ? 'text-right' : 'text-left'}`}>
-                    <div
-                      className={`inline-block px-4 py-2 lg:px-5 lg:py-3 rounded-2xl ${
-                        isMyMessage
-                          ? 'bg-gradient-to-r from-purple-600 to-cyan-500 text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      {renderMessageContent(message.content)}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1 lg:mt-2">
-                      {!isMyMessage && (
-                        <span className="text-xs lg:text-sm text-gray-500 font-medium">
+                <div key={message.id} className="w-full">
+                  <ChatBubbleGlassCard 
+                    isCurrentUser={isMyMessage}
+                    timestamp={formatDate(message.created_at)}
+                    className={isMyMessage ? 'ml-auto' : 'mr-auto'}
+                  >
+                    <div className="flex items-center gap-2">
+                      {!isMyMessage && message.sender.avatar_url && (
+                        <img
+                          src={message.sender.avatar_url}
+                          alt={message.sender.full_name}
+                          className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                        />
+                      )}
+                      {!isMyMessage && message.sender.full_name && (
+                        <span className="font-medium text-sm">
                           {message.sender.full_name}
                         </span>
                       )}
-                      <span className="text-xs lg:text-sm text-gray-400">
-                        {formatDate(message.created_at)}
-                      </span>
                     </div>
-                  </div>
+                    <div className="mt-1">
+                      {renderMessageContent(message.content)}
+                    </div>
+                  </ChatBubbleGlassCard>
                 </div>
               )
             })
           )}
-          <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
-        {/* Message Input */}
-        <div className="p-4 lg:p-6 border-t border-gray-200 flex-shrink-0">
+        {/* Input */}
+        <div className="relative z-10 p-4 sm:p-6 border-t border-white/10 mt-auto max-w-4xl mx-auto w-full">
           {!chatId && (
             <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-yellow-800 text-xs text-center">No chat ID provided</p>
             </div>
           )}
-          <form onSubmit={handleSendMessage}>
-          <div className="flex gap-3 lg:gap-4">
-            {/* Media Upload Button */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowMediaMenu(!showMediaMenu)}
-                disabled={uploadingMedia || !chatId}
-                className="p-2 lg:p-3 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {uploadingMedia ? (
-                  <Loader2 className="w-5 h-5 lg:w-6 lg:h-6 animate-spin" />
-                ) : (
-                  <Paperclip className="w-5 h-5 lg:w-6 lg:h-6" />
+          <form onSubmit={handleSubmit}>
+            <div className="flex gap-3 w-full">
+              {/* Media Upload Button */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowMediaMenu(!showMediaMenu)}
+                  disabled={uploadingMedia || !chatId}
+                  className="p-2 lg:p-3 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {uploadingMedia ? (
+                    <Loader2 className="w-5 h-5 lg:w-6 lg:h-6 animate-spin" />
+                  ) : (
+                    <Paperclip className="w-5 h-5 lg:w-6 lg:h-6" />
+                  )}
+                </button>
+                
+                {/* Media Menu */}
+                {showMediaMenu && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowMediaMenu(false)}
+                    />
+                    <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 lg:p-3 z-50">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fileInputRef.current?.click()
+                          setShowMediaMenu(false)
+                        }}
+                        className="flex items-center gap-2 w-full p-2 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        <Image className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
+                        <span className="text-sm lg:text-base">Photo</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fileInputRef.current?.click()
+                          setShowMediaMenu(false)
+                        }}
+                        className="flex items-center gap-2 w-full p-2 text-left hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        <Video className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" />
+                        <span className="text-sm lg:text-base">Video</span>
+                      </button>
+                    </div>
+                  </>
                 )}
-              </button>
+              </div>
               
-              {/* Media Menu */}
-              {showMediaMenu && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setShowMediaMenu(false)}
-                  />
-                  <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 lg:p-3 z-50">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        fileInputRef.current?.click()
-                        setShowMediaMenu(false)
-                      }}
-                      className="flex items-center gap-2 w-full p-2 text-left hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      <Image className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
-                      <span className="text-sm lg:text-base">Photo</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        fileInputRef.current?.click()
-                        setShowMediaMenu(false)
-                      }}
-                      className="flex items-center gap-2 w-full p-2 text-left hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      <Video className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" />
-                      <span className="text-sm lg:text-base">Video</span>
-                    </button>
-                  </div>
-                </>
-              )}
+              {/* Hidden File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              
+              <input
+                ref={inputRef}
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                className="flex-1 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                disabled={sending || !chatId}
+                maxLength={1000}
+              />
+              
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={(!newMessage.trim() && !uploadingMedia) || sending || !chatId || uploadingMedia}
+                className="flex items-center gap-2"
+              >
+                {sending || uploadingMedia ? (
+                  <Loader2 className="w-4 h-4 lg:w-5 lg:h-5 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 lg:w-5 lg:h-5" />
+                )}
+              </Button>
             </div>
-            
-            {/* Hidden File Input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            
-            <input
-              ref={inputRef}
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              className="flex-1 px-4 py-2 lg:px-5 lg:py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
-              disabled={sending || !chatId}
-              maxLength={1000}
-            />
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              disabled={(!newMessage.trim() && !uploadingMedia) || sending || !chatId || uploadingMedia}
-              className="flex items-center gap-2"
-            >
-              {sending || uploadingMedia ? (
-                <Loader2 className="w-4 h-4 lg:w-5 lg:h-5 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4 lg:w-5 lg:h-5" />
-              )}
-            </Button>
-          </div>
           </form>
           <p className="text-xs lg:text-sm text-gray-500 mt-2 lg:mt-3">
             {uploadingMedia ? 'Uploading media...' : `${newMessage.length}/1000 characters`}
           </p>
         </div>
+      </ChatGlassCard>
       </div>
     </div>
   )

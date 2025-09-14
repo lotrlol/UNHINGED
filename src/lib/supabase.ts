@@ -1,11 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '../types/database'
 
+// Debug: Log all environment variables
+console.log('All environment variables:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')))
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-console.log('Supabase URL:', supabaseUrl)
-console.log('Supabase Anon Key:', supabaseAnonKey ? 'Present' : 'Missing')
+console.log('Supabase URL from env:', supabaseUrl)
+console.log('Supabase Anon Key from env:', supabaseAnonKey)
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables:')
