@@ -36,6 +36,7 @@ export function ProfileTab() {
   const { signOut, user } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   
   // Fetch user's content
   const { 
@@ -55,6 +56,31 @@ export function ProfileTab() {
     }
   };
 
+  const getVideoThumbnail = (item: any) => {
+    // First try the thumbnail_url
+    if (item.thumbnail_url) {
+      return item.thumbnail_url;
+    }
+    
+    // For YouTube videos, extract video ID and use YouTube thumbnail
+    if (item.external_url && item.external_url.includes('youtube.com')) {
+      const videoId = item.external_url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
+      if (videoId) {
+        return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      }
+    }
+    
+    // For other video platforms, try to use external_url as fallback
+    if (item.content_type === 'video' && item.external_url) {
+      return item.external_url;
+    }
+    
+    return null;
+  };
+
+  const handleContentClick = (contentId: string) => {
+    setSelectedContentId(selectedContentId === contentId ? null : contentId);
+  };
   const handleCreateContent = () => {
     setShowCreateModal(true);
   };
@@ -429,7 +455,7 @@ export function ProfileTab() {
               </div>
             ) : viewMode === 'grid' ? (
               /* Grid View */
-              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 auto-rows-fr">
                 {userContent.map((item, index) => (
                   <motion.div
                     key={item.id}
@@ -482,24 +508,73 @@ export function ProfileTab() {
                 ))}
               </div>
             ) : (
+                  const isSelected = selectedContentId === item.id;
+                  const thumbnailUrl = item.content_type === 'video' ? getVideoThumbnail(item) : item.thumbnail_url;
+                  
               /* List View */
               <div className="space-y-4">
                 {userContent.map((item, index) => (
                   <motion.div
                     key={item.id}
                     initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                        scale: isSelected ? 1.2 : selectedContentId && !isSelected ? 0.8 : 1,
+                        zIndex: isSelected ? 10 : 1
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                     className="flex items-center gap-4 p-4 bg-black/40 rounded-xl hover:bg-black/60 transition-colors cursor-pointer group"
-                  >
+                      className={`relative bg-black/40 rounded-lg overflow-hidden group cursor-pointer transition-all duration-300 ${
+                        isSelected 
+                          ? 'aspect-video shadow-2xl shadow-purple-500/30 border-2 border-purple-500/50' 
+                          : 'aspect-square hover:scale-105'
+                      }`}
+                      onClick={() => handleContentClick(item.id)}
                     {/* Thumbnail */}
                     <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-600/40 to-pink-600/40">
-                      {item.thumbnail_url ? (
+                      {thumbnailUrl ? (
+                        <div className="relative w-full h-full">
                         <img
-                          src={item.thumbnail_url}
+                            src={thumbnailUrl}
                           alt={item.title}
-                          className="w-full h-full object-cover"
+                            className={`w-full h-full transition-all duration-300 ${
+                              isSelected ? 'object-contain bg-black' : 'object-cover'
+                            }`}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = `
+                                  <div class="w-full h-full bg-gradient-to-br from-purple-600/40 to-pink-600/40 flex items-center justify-center">
+                                    <span class="text-4xl">${getContentIcon(item.content_type)}</span>
+                                  </div>
+                                `;
+                              }
+                            }}
                         />
+                          
+                          {/* Video Player for Selected Videos */}
+                          {isSelected && item.content_type === 'video' && item.external_url && (
+                            <div className="absolute inset-0 bg-black flex items-center justify-center">
+                              {item.external_url.includes('youtube.com') || item.external_url.includes('youtu.be') ? (
+                                <iframe
+                                  src={`https://www.youtube.com/embed/${item.external_url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]}?autoplay=1`}
+                                  className="w-full h-full"
+                                  frameBorder="0"
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                  allowFullScreen
+                                />
+                              ) : (
+                                <video
+                                  src={item.external_url}
+                                  className="w-full h-full object-contain"
+                                  controls
+                                  autoPlay
+                                  muted
+                                  loop
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <span className="text-2xl">
@@ -509,7 +584,11 @@ export function ProfileTab() {
                       )}
                     </div>
 
-                    {/* Content Info */}
+                      <div className={`absolute inset-0 transition-all duration-300 flex items-center justify-center ${
+                        isSelected 
+                          ? 'bg-black/0 opacity-0' 
+                          : 'bg-black/0 group-hover:bg-black/60 opacity-0 group-hover:opacity-100'
+                      }`}>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-white truncate group-hover:text-purple-300 transition-colors">
                         {item.title}
@@ -517,19 +596,58 @@ export function ProfileTab() {
                       {item.description && (
                         <p className="text-gray-400 text-sm line-clamp-1 mt-1">
                           {item.description}
+                    onClick={() => handleContentClick(item.id)}
                         </p>
                       )}
                       <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                        <span>{formatDate(item.created_at)}</span>
+                      {item.thumbnail_url || (item.content_type === 'video' && getVideoThumbnail(item)) ? (
                         <div className="flex items-center gap-1">
-                          <Heart className="w-3 h-3" />
+                          src={item.thumbnail_url || getVideoThumbnail(item) || ''}
                           <span>{item.like_count}</span>
                         </div>
-                        <div className="flex items-center gap-1">
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = `
+                                <div class="w-full h-full flex items-center justify-center">
+                                  <span class="text-2xl">${getContentIcon(item.content_type)}</span>
+                                </div>
+                              `;
+                            }
+                          }}
+                      <div className={`absolute top-2 left-2 transition-opacity duration-300 ${
+                        isSelected ? 'opacity-0' : 'opacity-100'
+                      }`}>
                           <Eye className="w-3 h-3" />
                           <span>{item.view_count}</span>
                         </div>
                       </div>
+                      
+                      {/* Selected Content Info */}
+                      {isSelected && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4"
+                        >
+                          <h4 className="font-semibold text-white text-sm mb-1 line-clamp-2">
+                            {item.title}
+                          </h4>
+                          <div className="flex items-center gap-4 text-xs text-gray-300">
+                            <div className="flex items-center gap-1">
+                              <Heart className="w-3 h-3" />
+                              <span>{item.like_count}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="w-3 h-3" />
+                              <span>{item.view_count}</span>
+                            </div>
+                            <span>{formatDate(item.created_at)}</span>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
 
                     {/* Actions */}
@@ -541,7 +659,7 @@ export function ProfileTab() {
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
                     </div>
-                  </motion.div>
+                  );
                 ))}
               </div>
             )}
