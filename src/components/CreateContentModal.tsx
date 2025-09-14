@@ -169,7 +169,7 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
   const additionalTypes = CONTENT_TYPES.filter((t) => !t.primary)
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col pt-4 pb-4 px-4">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9999] flex flex-col pt-4 pb-4 px-4">
       <style>
         {`
           .space-y-8 > :not([hidden]) ~ :not([hidden]) {
