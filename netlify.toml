@@ -16,8 +16,43 @@
     X-Content-Type-Options = "nosniff"
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # PWA headers
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Service-Worker-Allowed = "/"
+
+# Caching headers for static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Caching headers for service worker
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+    Service-Worker-Allowed = "/"
 
 # Redirect all traffic to index.html (SPA handling)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Handle 404s - SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404
+  force = false
+
+# Handle service worker scope
+[[redirects]]
+  from = "/sw.js"
+  to = "/sw.js"
+  status = 200
+  headers = { ServiceWorker = "script" }
 [[redirects]]
   from = "/*"
   to = "/index.html"

@@ -10,6 +10,7 @@ import { MatchesTab } from './components/MatchesTab';
 import { ProfileTab } from './components/ProfileTab';
 import { AuthModal } from './components/AuthModal';
 import { OnboardingWizard } from './components/OnboardingWizard';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { useAuth } from './hooks/useAuth';
 import { useProfile } from './hooks/useProfile';
 import { useProjects } from './hooks/useProjects';
@@ -212,6 +213,9 @@ const App: React.FC<AppProps> = () => {
           />
         )}
       </AnimatePresence>
+      
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
     </div>
   );
 };
