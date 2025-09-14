@@ -1,8 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
-import { register } from './serviceWorkerRegistration';
+import { BrowserRouter } from 'react-router-dom';
 import './index.css';
+import App from './App';
 
 // PWA types
 declare global {
@@ -27,11 +27,6 @@ interface BeforeInstallPromptEvent extends Event {
 
 // Initialize PWA
 function initializePWA() {
-  // Register service worker
-  if ('serviceWorker' in navigator) {
-    register();
-  }
-  
   // Handle installation prompt
   window.addEventListener('beforeinstallprompt', (e: Event) => {
     e.preventDefault();
@@ -64,7 +59,9 @@ if (container) {
   // Render the app
   root.render(
     <StrictMode>
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </StrictMode>
   );
 }
