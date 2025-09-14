@@ -28,6 +28,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
+      outDir: 'dist',
+      sourcemap: false,
       commonjsOptions: {
         include: [/node_modules/],
         extensions: ['.js', '.cjs'],
