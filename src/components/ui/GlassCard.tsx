@@ -344,17 +344,6 @@ function ChatGlassCard({
                 <X className="w-5 h-5" />
               </button>
             )}
-            {avatarImage || (avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white text-4xl">
-                {name?.charAt(0).toUpperCase()}
-              </div>
-            ))}
           </div>
         </div>
 
