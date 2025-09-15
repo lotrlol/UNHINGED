@@ -124,7 +124,13 @@ interface LandingGlassCardProps extends Omit<GlassCardProps, 'className' | keyof
 const glassBaseStyle = {
   backdropFilter: 'blur(10px) brightness(1.1)',
   WebkitBackdropFilter: 'blur(10px) brightness(1.1)',
-  backgroundColor: 'rgba(15, 23, 42, 0.65)',
+  backgroundColor: 'rgba(17, 25, 40, 0.4)',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+  transition: 'all 0.3s ease',
+  position: 'relative',
+  zIndex: 'auto',
+  isolation: 'isolate',
 };
 
 const glassOverlay = (
@@ -213,12 +219,10 @@ function GlassCard({
   saturation = 1.2,
   shadowIntensity = 0.3,
   elasticity = 0.4,
-  ...props
 }: GlassCardProps) {
   return (
-    <div className={cn('relative overflow-hidden rounded-2xl', className)}>
+    <div className={cn('relative overflow-hidden rounded-2xl', className)} style={{ zIndex: 'auto', position: 'relative' }}>
       <LiquidGlass
-        className="w-full h-full"
         borderRadius={borderRadius}
         blur={blur}
         contrast={contrast}
@@ -226,12 +230,11 @@ function GlassCard({
         saturation={saturation}
         shadowIntensity={shadowIntensity}
         elasticity={elasticity}
-        style={glassBaseStyle}
-        {...props}
-      >
-        {glassOverlay}
-        <div className="relative z-10 h-full">{children}</div>
-      </LiquidGlass>
+        className="absolute inset-0 w-full h-full"
+      />
+      <div className="relative" style={{ zIndex: 2, position: 'relative' }}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -932,6 +935,95 @@ function ProjectGlassCard({
   );
 }
 
+/* -------------------- ProjectFormGlassCard -------------------- */
+interface ProjectFormGlassCardProps {
+  children: React.ReactNode;
+  className?: string;
+  currentStep: number;
+  totalSteps: number;
+  onClose?: () => void;
+  title?: string;
+}
+
+export function ProjectFormGlassCard({
+  children,
+  currentStep,
+  totalSteps,
+  onClose,
+  className = '',
+  title = 'Create Project'
+}: ProjectFormGlassCardProps) {
+  const progress = totalSteps > 0 ? (currentStep / (totalSteps - 1)) * 100 : 0;
+
+  return (
+    <motion.div 
+      className={cn(
+        'fixed inset-0 z-[10000] flex flex-col',
+        'bg-gradient-to-br from-gray-900/80 via-gray-900/70 to-purple-900/20 backdrop-blur-xl',
+        'border border-purple-900/30 shadow-2xl shadow-purple-900/10',
+        'transform transition-all duration-300',
+        className
+      )}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+    >
+      {/* Background gradients */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-transparent to-pink-900/5" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-purple-500/5 via-transparent to-transparent" />
+      </div>
+      
+      {/* Progress bar */}
+      {totalSteps > 1 && (
+        <div className="h-1 bg-gray-800/50 overflow-hidden">
+          <motion.div 
+            className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+          />
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="p-6 pb-0">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">
+              {title}
+            </h2>
+          </div>
+          {onClose && (
+            <button 
+              onClick={onClose}
+              className="text-gray-400 hover:text-white p-1 -m-1.5 transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Content - Scrollable area */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-3xl mx-auto w-full">
+          {children}
+        </div>
+      </div>
+      
+      {/* Step counter and navigation */}
+      <div className="p-6 pt-0 flex justify-between items-center">
+        <div className="text-sm text-purple-200/70">
+          Step {currentStep + 1} of {totalSteps}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export { 
   GlassCard, 
   ContentGlassCard, 
@@ -940,9 +1032,9 @@ export {
   ChatBubbleGlassCard, 
   AuthGlassCard, 
   ProfileGlassCard, 
-  OnboardingGlassCard, 
-  LandingGlassCard, 
+  OnboardingGlassCard,
+  ProjectGlassCard,
   NavigationGlassCard, 
   FilterGlassCard,
-  ProjectGlassCard 
+  LandingGlassCard 
 };

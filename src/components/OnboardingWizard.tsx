@@ -1242,6 +1242,9 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                             {steps[currentStep].title}
                           </h2>
                           <p className="text-purple-200/70 text-sm">{steps[currentStep].description}</p>
+                          <div className="text-purple-200/70 text-xs mt-2">
+                            Step {currentStep + 1} of {steps.length}
+                          </div>
                         </div>
                         <div className="flex-1">
                           {renderStep(currentStep)}

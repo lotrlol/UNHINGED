@@ -317,7 +317,7 @@ function ProjectThreadCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group"
+      className="group relative z-10"
     >
       <GlassCard className="overflow-hidden hover:bg-white/10 transition-all duration-200">
         {/* Thread Header - Always Visible */}

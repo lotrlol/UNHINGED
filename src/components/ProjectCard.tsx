@@ -36,7 +36,7 @@ export function ProjectCard({ project, onSkip }: ProjectCardProps) {
   }
 
   return (
-    <div className="relative max-w-sm mx-auto overflow-hidden rounded-2xl">
+    <div className="relative max-w-sm mx-auto overflow-hidden rounded-2xl z-0">
       {/* Blurred background image */}
       {project.cover_url ? (
         <div className="absolute inset-0 -z-10">

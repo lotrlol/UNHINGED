@@ -38,16 +38,14 @@ const App: React.FC<AppProps> = () => {
   }, [])
 
   useEffect(() => {
-    // Only auto-show onboarding if user hasn't explicitly closed it
-    if (!userClosedOnboarding) {
-      if (user && !profileLoading && !authLoading) {
-        if (!profile) {
-          setShowOnboarding(true)
-        } else if (!profile.onboarding_completed) {
-          setShowOnboarding(true)
-        } else {
-          setShowOnboarding(false)
-        }
+    // Only check onboarding status if we have a user and profile data is loaded
+    if (user && !profileLoading && !authLoading) {
+      // If user has no profile or hasn't completed onboarding, show it
+      // But only if they haven't explicitly closed it
+      if (!userClosedOnboarding && (!profile || !profile.onboarding_completed)) {
+        setShowOnboarding(true);
+      } else {
+        setShowOnboarding(false);
       }
     }
   }, [user, profile, profileLoading, authLoading, userClosedOnboarding])
