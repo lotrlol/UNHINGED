@@ -23,6 +23,7 @@ import { ProfileCard } from './ProfileCard';
 import { supabase } from '../lib/supabase';
 import { CreateContentModal } from './CreateContentModal';
 import { useProjects } from '../hooks/useProjects';
+import { EditProfileModal } from './EditProfileModal';
 
 type ContentItem = {
   id: string;
@@ -117,6 +118,7 @@ export function ProfileTab() {
   const [swiping, setSwiping] = useState(false);
   const [[x, y], setXY] = useState([0, 0]);
   const [uploading, setUploading] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Fetch user's projects
   const { projects: allProjects, loading: projectsLoading } = useProjects();
@@ -799,6 +801,17 @@ export function ProfileTab() {
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onContentCreated={handleContentCreated}
+        />
+        
+        {/* Edit Profile Modal */}
+        <EditProfileModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSave={() => {
+            setShowEditModal(false);
+            // Refresh profile data
+            window.location.reload();
+          }}
         />
         
         {/* Lightbox for media content */}
