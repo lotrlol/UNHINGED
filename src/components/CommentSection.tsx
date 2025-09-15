@@ -11,7 +11,8 @@ interface CommentSectionProps {
   className?: string
   showPreview?: boolean
   maxPreviewComments?: number
-  onViewAll?: () => void
+  onToggleExpand?: () => void
+  isExpanded?: boolean
 }
 
 interface UserSuggestion {
@@ -26,7 +27,8 @@ export function CommentSection({
   className = '', 
   showPreview = false, 
   maxPreviewComments = 3,
-  onViewAll 
+  onToggleExpand,
+  isExpanded = false
 }: CommentSectionProps) {
   const { user } = useAuth()
   const { comments, loading, submitting, createComment, likeComment, deleteComment, searchUsers } = useComments(contentId)
@@ -401,15 +403,15 @@ export function CommentSection({
         )
       ) : (
         <div className="space-y-4">
-          {(showPreview ? comments.slice(0, maxPreviewComments) : comments).map((comment) => (
+          {(showPreview && !isExpanded ? comments.slice(0, maxPreviewComments) : comments).map((comment) => (
             <CommentItem key={comment.id} comment={comment} />
           ))}
-          {showPreview && comments.length > maxPreviewComments && onViewAll && (
+          {showPreview && comments.length > maxPreviewComments && onToggleExpand && (
             <button
-              onClick={onViewAll}
+              onClick={onToggleExpand}
               className="w-full text-center py-3 text-purple-400 hover:text-purple-300 transition-colors text-sm font-medium"
             >
-              View all {comments.length} comments
+              {isExpanded ? 'Show less' : `View all ${comments.length} comments`}
             </button>
           )}
         </div>
