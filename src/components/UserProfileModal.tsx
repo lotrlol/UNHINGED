@@ -145,10 +145,10 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900"
+            className="fixed inset-0 z-[100] bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900"
           >
             {/* Header */}
-            <div className="relative z-10 flex items-center justify-between p-4 bg-black/20 backdrop-blur-md border-b border-white/10">
+            <div className="relative z-10 flex items-center justify-between p-4 bg-black/40 backdrop-blur-md border-b border-white/10">
               <button
                 onClick={onClose}
                 className="p-2 rounded-full bg-black/30 hover:bg-black/50 text-white transition-colors"
