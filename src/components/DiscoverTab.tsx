@@ -416,35 +416,9 @@ export function DiscoverTab() {
         </motion.div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-8 z-50">
-        <motion.button
-          onClick={handlePass}
-          disabled={liking || swipeDirection !== null}
-          className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500/90 to-red-600/90 backdrop-blur-md border border-red-400/30 shadow-2xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <X className="w-7 h-7" />
-        </motion.button>
-        
-        <motion.button
-          onClick={handleLike}
-          disabled={liking || swipeDirection !== null}
-          className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500/90 to-purple-600/90 backdrop-blur-md border border-pink-400/30 shadow-2xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          {liking ? (
-            <Loader2 className="w-8 h-8 animate-spin" />
-          ) : (
-            <Heart className="w-8 h-8" />
-          )}
-        </motion.button>
-      </div>
 
       {/* Swipe hint */}
-      <div className="fixed bottom-32 left-1/2 -translate-x-1/2 text-center text-xs text-gray-400 z-50">
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 text-center text-xs text-gray-400 z-50">
         Swipe or use buttons • ← Pass • Like →
       </div>
 
@@ -487,6 +461,32 @@ export function DiscoverTab() {
                 />
               </div>
             </motion.div>
+            {/* Integrated Action Buttons */}
+            <div className="flex gap-4 justify-center">
+              <motion.button
+                onClick={handlePass}
+                disabled={liking || swipeDirection !== null}
+                className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500/90 to-red-600/90 backdrop-blur-md border border-red-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <X className="w-6 h-6" />
+              </motion.button>
+              
+              <motion.button
+                onClick={handleLike}
+                disabled={liking || swipeDirection !== null}
+                className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500/90 to-purple-600/90 backdrop-blur-md border border-pink-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {liking ? (
+                  <Loader2 className="w-7 h-7 animate-spin" />
+                ) : (
+                  <Heart className="w-7 h-7" />
+                )}
+              </motion.button>
+            </div>
           </>
         )}
       </AnimatePresence>
