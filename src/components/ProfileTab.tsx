@@ -754,6 +754,5 @@ export function ProfileTab() {
         </motion.div>
       )}
     </div>
-  </div>
-);
+  );
 }
