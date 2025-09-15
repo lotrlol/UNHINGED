@@ -464,10 +464,7 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
 
               {/* Tags Section */}
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="text-lg">🏷️</span>
-                  <h3 className="text-lg font-semibold text-white">Tags (Optional)</h3>
-                </div>
+                
 
                 <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                   {CREATIVE_TAGS.map((tag) => (
