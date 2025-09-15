@@ -375,7 +375,7 @@ const ContentTab: React.FC = () => {
                         className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors"
                       >
                         <MessageSquare className="w-5 h-5" />
-                        <span className="text-sm">{(item as any).comment_count || 0}</span>
+                        <span className="text-sm">{item.comment_count || 0}</span>
                       </button>
                       <button className="text-gray-400 hover:text-green-400 transition-colors">
                         <Share2 className="w-5 h-5" />
