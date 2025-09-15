@@ -20,6 +20,9 @@ import { useContent } from '../hooks/useContent';
 import { AvatarUploader } from './AvatarUploader';
 import { ProfileCard } from './ProfileCard';
 import { supabase } from '../lib/supabase';
+import { CreateContentModal } from './CreateContentModal';
+import { CONTENT_TYPES } from '../constants/contentTypes';
+import { formatDate } from '../utils/dateUtils';
 
 type ContentItem = {
   id: string;
@@ -27,16 +30,21 @@ type ContentItem = {
   content_type: string;
   external_url: string | null;
   thumbnail_url?: string | null;
+  description?: string;
+  created_at: string;
+  view_count: number;
   // Add other necessary fields from your content items
 };
 
 const VideoPlayer: React.FC<{
   src: string | null;
   title: string;
+  thumbnail?: string | null;
   className?: string;
 }> = ({
   src,
   title,
+  thumbnail,
   className = '',
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
