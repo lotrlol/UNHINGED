@@ -145,7 +145,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-gradient-to-br from-gray-900 via-blue-900/90 to-gray-900"
+            className="fixed inset-0 z-[100] bg-gradient-to-br from-gray-900 via-white-900/100 to-gray-900"
           >
             {/* Header */}
             <div className="relative z-10 flex items-center justify-between p-4 bg-black/40 backdrop-blur-md border-b border-white/10">
