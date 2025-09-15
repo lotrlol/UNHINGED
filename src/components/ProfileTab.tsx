@@ -118,7 +118,7 @@ export function ProfileTab() {
   const [swiping, setSwiping] = useState(false);
   const [[x, y], setXY] = useState([0, 0]);
   const [uploading, setUploading] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+
 
   // Fetch user's projects
   const { projects: allProjects, loading: projectsLoading } = useProjects();
