@@ -704,6 +704,13 @@ export function ProfileTab() {
                           <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
                             <span>{getContentIcon(item.content_type)} {item.content_type}</span>
                             <span>{formatDate(item.created_at)}</span>
+                            
+                            {/* Show loader or error */}
+                            {(activeSection === 'content' ? contentLoading : projectsLoading) ? (
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0 animate-pulse" />
+                            ) : (activeSection === 'content' ? contentError : false) ? (
+                              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
+                            ) : null}
                           </div>
                         </div>
                       
