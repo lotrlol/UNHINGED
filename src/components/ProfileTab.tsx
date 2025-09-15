@@ -507,17 +507,17 @@ export function ProfileTab() {
             <div className="flex items-center gap-3">
               <div className="flex bg-black/40 rounded-lg p-1 backdrop-blur-sm border border-white/10">
                 <button
-                  onClick={() => setViewMode('grid')}
+                  onClick={() => setContentViewMode('grid')}
                   className={`p-2 rounded-md transition-all ${
-                    viewMode === 'grid' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
+                    contentViewMode === 'grid' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
                   }`}
                 >
                   <Grid3X3 size={18} />
                 </button>
                 <button
-                  onClick={() => setViewMode('list')}
+                  onClick={() => setContentViewMode('list')}
                   className={`p-2 rounded-md transition-all ${
-                    viewMode === 'list' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
+                    contentViewMode === 'list' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
                   }`}
                 >
                   <List size={18} />
@@ -563,11 +563,11 @@ export function ProfileTab() {
             </div>
 
             {/* Content header with view controls */}
-              <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">
                 {activeSection === 'content' ? 'My Content' : 'My Projects'}
               </h3>
-              </div>
+              <div className="flex items-center gap-3">
                 {activeSection === 'content' && (
                   <div className="flex bg-black/40 rounded-lg p-1 backdrop-blur-sm border border-white/10">
                     <button
@@ -597,192 +597,282 @@ export function ProfileTab() {
                   {activeSection === 'content' ? 'Create' : 'New Project'}
                 </Button>
               </div>
+            </div>
+
+            {(activeSection === 'content' ? contentLoading : projectsLoading) ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+              </div>
+            ) : (activeSection === 'content' ? contentError : false) ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">⚠️</div>
+                <h3 className="text-lg font-semibold text-white mb-2">Error loading content</h3>
+                <p className="text-gray-300">{contentError instanceof Error ? contentError.message : String(contentError)}</p>
+              </div>
+            ) : (activeSection === 'content' ? userContent.length === 0 : userProjects.length === 0) ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">{activeSection === 'content' ? '📸' : '🚀'}</div>
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  {activeSection === 'content' ? 'No content yet' : 'No projects yet'}
+                </h3>
+                <p className="text-gray-300 mb-6">
+                  {activeSection === 'content' 
+                    ? 'Share your first piece of content to showcase your work'
+                    : 'Create your first collaboration project to start connecting with other creators'
+                  }
+                </p>
+                <Button
+                  onClick={handleCreate}
+                  variant="primary"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600"
+                >
+                  {activeSection === 'content' ? 'Create Your First Post' : 'Create Your First Project'}
+                </Button>
+              </div>
             ) : (
-              <div className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4' : 'space-y-4'}>
-                {userContent.map((item, index) => {
-                  const isSelected = selectedContentId === item.id;
-                  const thumbnailUrl = item.content_type === 'video' ? getVideoThumbnail(item) : item.thumbnail_url;
-                
-                  return viewMode === 'grid' ? (
-                    /* Grid View */
-                    <div
-                      key={item.id}
-                      className="relative aspect-square bg-black/20 rounded-lg overflow-hidden cursor-pointer group hover:scale-105 transition-transform backdrop-blur-sm border border-white/10"
-                      onClick={() => handleContentClick(item, index)}
-                    >
-                      {item.content_type === 'video' ? (
-                        <VideoPlayer
-                          src={item.external_url}
-                          title={item.title}
-                          className="w-full h-full"
-                        />
-                      ) : thumbnailUrl ? (
-                        <img
-                          src={thumbnailUrl}
-                          alt={item.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = 'https://placehold.co/400x400/1a1a1a/666666?text=' + encodeURIComponent(getContentIcon(item.content_type));
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600/20 to-pink-600/20">
-                          <span className="text-4xl">{getContentIcon(item.content_type)}</span>
-                        </div>
-                      )}
-                    
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <div className="text-white text-center">
-                          <div className="text-2xl mb-1">{getContentIcon(item.content_type)}</div>
-                          <p className="text-xs font-medium truncate px-2">{item.title}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* List View */
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-4 p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer backdrop-blur-sm border border-white/10"
-                      onClick={() => handleContentClick(item, index)}
-                    >
-                      <div className="w-16 h-16 bg-black/20 rounded-lg overflow-hidden flex-shrink-0">
-                        {thumbnailUrl ? (
+              activeSection === 'content' ? (
+                <div className={contentViewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4' : 'space-y-4'}>
+                  {userContent.map((item, index) => {
+                    const isSelected = selectedContentId === item.id;
+                    const thumbnailUrl = item.content_type === 'video' ? getVideoThumbnail(item) : item.thumbnail_url;
+                  
+                    return contentViewMode === 'grid' ? (
+                      /* Grid View */
+                      <div
+                        key={item.id}
+                        className="relative aspect-square bg-black/20 rounded-lg overflow-hidden cursor-pointer group hover:scale-105 transition-transform backdrop-blur-sm border border-white/10"
+                        onClick={() => handleContentClick(item, index)}
+                      >
+                        {item.content_type === 'video' ? (
+                          <VideoPlayer
+                            src={item.external_url}
+                            title={item.title}
+                            className="w-full h-full"
+                          />
+                        ) : thumbnailUrl ? (
                           <img
                             src={thumbnailUrl}
                             alt={item.title}
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
-                              target.src = 'https://placehold.co/64x64/1a1a1a/666666?text=' + encodeURIComponent(getContentIcon(item.content_type));
+                              target.src = 'https://placehold.co/400x400/1a1a1a/666666?text=' + encodeURIComponent(getContentIcon(item.content_type));
                             }}
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-xl">{getContentIcon(item.content_type)}</span>
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600/20 to-pink-600/20">
+                            <span className="text-4xl">{getContentIcon(item.content_type)}</span>
                           </div>
                         )}
-                      </div>
-                    
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-white truncate">{item.title}</h4>
-                        <p className="text-sm text-gray-300 truncate">{item.description || 'No description'}</p>
-                        <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
-                          <span>{getContentIcon(item.content_type)} {item.content_type}</span>
-                          <span>{formatDate(item.created_at)}</span>
-              {(activeSection === 'content' ? contentLoading : projectsLoading) ? (
+                      
+                        {/* Overlay */}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="text-white text-center">
+                            <div className="text-2xl mb-1">{getContentIcon(item.content_type)}</div>
+                            <p className="text-xs font-medium truncate px-2">{item.title}</p>
+                          </div>
                         </div>
                       </div>
-                    
-              ) : (activeSection === 'content' ? contentError : false) ? (
-                        <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </motion.div>
-      
-        {/* Create Content Modal */}
-        <CreateContentModal
-              ) : (activeSection === 'content' ? userContent.length === 0 : userProjects.length === 0) ? (
-          onClose={() => setShowCreateModal(false)}
-                  <div className="text-6xl mb-4">{activeSection === 'content' ? '📸' : '🚀'}</div>
-                  <h3 className="text-lg font-semibold text-white mb-2">
-                    {activeSection === 'content' ? 'No content yet' : 'No projects yet'}
-                  </h3>
-                  <p className="text-gray-300 mb-6">
-                    {activeSection === 'content' 
-                      ? 'Share your first piece of content to showcase your work'
-                      : 'Create your first collaboration project to start connecting with other creators'
-                    }
-                  </p>
-        {/* Lightbox for media content */}
-        {lightboxContent && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-                    {activeSection === 'content' ? 'Create Your First Post' : 'Create Your First Project'}
-            onClick={() => setLightboxContent(null)}
-          >
-            <div className="relative w-full max-w-4xl h-[80vh]">
-                activeSection === 'content' ? (
-                  <div className={contentViewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4' : 'space-y-4'}>
-                    {userContent.map((item, index) => {
-                      const isSelected = selectedContentId === item.id;
-                      const thumbnailUrl = item.content_type === 'video' ? getVideoThumbnail(item) : item.thumbnail_url;
-                    
-                      return contentViewMode === 'grid' ? (
-                        /* Grid View */
-                        <div
-                          key={item.id}
-                          className="relative aspect-square bg-black/20 rounded-lg overflow-hidden cursor-pointer group hover:scale-105 transition-transform backdrop-blur-sm border border-white/10"
-                          onClick={() => handleContentClick(item, index)}
-                        >
-                          {item.content_type === 'video' ? (
-                            <VideoPlayer
-                              src={item.external_url}
-                              title={item.title}
-                              className="w-full h-full"
-                            />
-                          ) : thumbnailUrl ? (
+                    ) : (
+                      /* List View */
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-4 p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer backdrop-blur-sm border border-white/10"
+                        onClick={() => handleContentClick(item, index)}
+                      >
+                        <div className="w-16 h-16 bg-black/20 rounded-lg overflow-hidden flex-shrink-0">
+                          {thumbnailUrl ? (
                             <img
                               src={thumbnailUrl}
                               alt={item.title}
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                target.src = 'https://placehold.co/400x400/1a1a1a/666666?text=' + encodeURIComponent(getContentIcon(item.content_type));
+                                target.src = 'https://placehold.co/64x64/1a1a1a/666666?text=' + encodeURIComponent(getContentIcon(item.content_type));
                               }}
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600/20 to-pink-600/20">
-                              <span className="text-4xl">{getContentIcon(item.content_type)}</span>
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="text-xl">{getContentIcon(item.content_type)}</span>
                             </div>
                           )}
-                        
-                          {/* Overlay */}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <div className="text-white text-center">
-                              <div className="text-2xl mb-1">{getContentIcon(item.content_type)}</div>
-                              <p className="text-xs font-medium truncate px-2">{item.title}</p>
-                            </div>
+                        </div>
+                      
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-white truncate">{item.title}</h4>
+                          <p className="text-sm text-gray-300 truncate">{item.description || 'No description'}</p>
+                          <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
+                            <span>{getContentIcon(item.content_type)} {item.content_type}</span>
+                            <span>{formatDate(item.created_at)}</span>
                           </div>
                         </div>
-                      ) : (
-                        /* List View */
-                        <div
-                          key={item.id}
-                          className="flex items-center gap-4 p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer backdrop-blur-sm border border-white/10"
-                          onClick={() => handleContentClick(item, index)}
-                        >
-                          <div className="w-16 h-16 bg-black/20 rounded-lg overflow-hidden flex-shrink-0">
-                            {thumbnailUrl ? (
-                              <img
-                                src={thumbnailUrl}
-                                alt={item.title}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = 'https://placehold.co/64x64/1a1a1a/666666?text=' + encodeURIComponent(getContentIcon(item.content_type));
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <span className="text-xl">{getContentIcon(item.content_type)}</span>
-                              </div>
+                      
+                        {isSelected && (
+                          <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* Projects Grid */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {userProjects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="relative bg-white/5 rounded-xl overflow-hidden backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all group cursor-pointer"
+                    >
+                      {/* Project Cover */}
+                      <div className="relative h-32 bg-gradient-to-br from-purple-600/40 to-pink-600/40">
+                        {project.cover_url ? (
+                          <img
+                            src={project.cover_url}
+                            alt={project.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-4xl text-white/30 font-bold">
+                              {project.title.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        
+                        {/* Project Type Badge */}
+                        <div className="absolute top-3 right-3">
+                          <Badge className="bg-black/50 text-white border-white/20 backdrop-blur-sm">
+                            {project.collab_type}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Project Info */}
+                      <div className="p-4">
+                        <h4 className="font-semibold text-white mb-2 line-clamp-1">{project.title}</h4>
+                        <p className="text-sm text-gray-300 mb-3 line-clamp-2">{project.description}</p>
+                        
+                        {/* Roles Needed */}
+                        <div className="mb-3">
+                          <p className="text-xs text-gray-400 mb-1">Looking for:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {project.roles_needed.slice(0, 3).map((role) => (
+                              <Badge key={role} className="bg-purple-900/30 text-purple-200 border-purple-700/50 text-xs">
+                                {role}
+                              </Badge>
+                            ))}
+                            {project.roles_needed.length > 3 && (
+                              <Badge className="bg-purple-900/30 text-purple-200 border-purple-700/50 text-xs">
+                                +{project.roles_needed.length - 3}
+                              </Badge>
                             )}
                           </div>
-                        
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-white truncate">{item.title}</h4>
-                            <p className="text-sm text-gray-300 truncate">{item.description || 'No description'}</p>
-                            <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
-                              <span>{getContentIcon(item.content_type)} {item.content_type}</span>
+                        </div>
+
+                        {/* Project Details */}
+                        <div className="flex items-center justify-between text-xs text-gray-400">
+                          <div className="flex items-center gap-2">
+                            <span>{project.is_remote ? '🌍 Remote' : `📍 ${project.location || 'Local'}`}</span>
+                          </div>
+                          <span>{formatDate(project.created_at)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        </motion.div>
+      
+        {/* Create Content Modal */}
+        <CreateContentModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onContentCreated={handleContentCreated}
+        />
+        
+        {/* Lightbox for media content */}
+        {lightboxContent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+            onClick={() => setLightboxContent(null)}
+          >
+            <div className="relative w-full max-w-4xl h-[80vh]">
+              {/* Close button */}
+              <button
+                onClick={closeLightbox}
+                className="absolute top-4 right-4 z-10 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+              >
+                ✕
+              </button>
+
+              {/* Navigation buttons */}
+              {currentIndex > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('prev');
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 text-white p-3 rounded-full hover:bg-black/70 transition-colors"
+                >
+                  ←
+                </button>
+              )}
+              
+              {currentIndex < mediaContent.length - 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('next');
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 text-white p-3 rounded-full hover:bg-black/70 transition-colors"
+                >
+                  →
+                </button>
+              )}
+
+              {/* Media content */}
+              <div
+                className="w-full h-full flex items-center justify-center"
+                onClick={(e) => e.stopPropagation()}
+                onTouchStart={handleSwipeStart}
+                onTouchMove={handleSwipeMove}
+                onTouchEnd={handleSwipeEnd}
+                onMouseDown={handleSwipeStart}
+                onMouseMove={handleSwipeMove}
+                onMouseUp={handleSwipeEnd}
+              >
+                {lightboxContent.type === 'video' ? (
+                  <video
+                    src={lightboxContent.url}
+                    controls
+                    className="max-w-full max-h-full"
+                    autoPlay
+                  />
+                ) : (
+                  <img
+                    src={lightboxContent.url}
+                    alt={lightboxContent.title}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                )}
+              </div>
+
+              {/* Title and counter */}
+              <div className="absolute bottom-4 left-4 right-4 text-center">
+                <h3 className="text-white text-lg font-medium mb-2">{lightboxContent.title}</h3>
+                <p className="text-gray-300 text-sm">
+                  {currentIndex + 1} of {mediaContent.length}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }
@@ -797,80 +887,3 @@ function formatDate(dateString: string) {
 }
 
 export default ProfileTab;
-                            </div>
-                          </div>
-                        
-                          {isSelected && (
-                            <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  /* Projects Grid */
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {userProjects.map((project) => (
-                      <div
-                        key={project.id}
-                        className="relative bg-white/5 rounded-xl overflow-hidden backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all group cursor-pointer"
-                      >
-                        {/* Project Cover */}
-                        <div className="relative h-32 bg-gradient-to-br from-purple-600/40 to-pink-600/40">
-                          {project.cover_url ? (
-                            <img
-                              src={project.cover_url}
-                              alt={project.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="text-4xl text-white/30 font-bold">
-                                {project.title.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                          
-                          {/* Project Type Badge */}
-                          <div className="absolute top-3 right-3">
-                            <Badge className="bg-black/50 text-white border-white/20 backdrop-blur-sm">
-                              {project.collab_type}
-                            </Badge>
-                          </div>
-                        </div>
-
-                        {/* Project Info */}
-                        <div className="p-4">
-                          <h4 className="font-semibold text-white mb-2 line-clamp-1">{project.title}</h4>
-                          <p className="text-sm text-gray-300 mb-3 line-clamp-2">{project.description}</p>
-                          
-                          {/* Roles Needed */}
-                          <div className="mb-3">
-                            <p className="text-xs text-gray-400 mb-1">Looking for:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {project.roles_needed.slice(0, 3).map((role) => (
-                                <Badge key={role} className="bg-purple-900/30 text-purple-200 border-purple-700/50 text-xs">
-                                  {role}
-                                </Badge>
-                              ))}
-                              {project.roles_needed.length > 3 && (
-                                <Badge className="bg-purple-900/30 text-purple-200 border-purple-700/50 text-xs">
-                                  +{project.roles_needed.length - 3}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Project Details */}
-                          <div className="flex items-center justify-between text-xs text-gray-400">
-                            <div className="flex items-center gap-2">
-                              <span>{project.is_remote ? '🌍 Remote' : `📍 ${project.location || 'Local'}`}</span>
-                            </div>
-                            <span>{formatDate(project.created_at)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
