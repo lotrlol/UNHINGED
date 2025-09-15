@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, MapPin, Calendar, MessageCircle, Check, Sparkles, Grid3X3, List, Play, Heart, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { UserPlus, UserMinus, Users } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { getInitials, formatDate } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useContent } from '../hooks/useContent';
+import { useFollows } from '../hooks/useFollows';
 import { SendFriendRequestModal } from './SendFriendRequestModal';
 
 interface UserProfileModalProps {
@@ -37,6 +39,9 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   
   // Fetch user's content
   const { content: userContent, loading: contentLoading } = useContent(user ? { creator_id: user.id } : undefined);
+  
+  // Fetch follow data
+  const { stats, actionLoading, toggleFollow } = useFollows(user?.id);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -215,7 +220,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                   )}
 
                   {/* Quick Stats */}
-                  <div className="flex items-center gap-4 mb-6 text-sm text-gray-400">
+                  <div className="flex items-center gap-4 mb-4 text-sm text-gray-400">
                     {user.location && (
                       <div className="flex items-center gap-1">
                         <MapPin className="w-4 h-4" />
@@ -229,14 +234,59 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                     </div>
                   </div>
 
-                  {/* Action Button */}
-                  <Button
-                    className="w-full mb-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-xl"
-                   onClick={() => setShowFriendRequestModal(true)}
-                  >
-                    <MessageCircle className="w-5 h-5 mr-2" />
-                   Send Friend Request
-                  </Button>
+                  {/* Follow Stats */}
+                  <div className="flex items-center gap-6 mb-6 text-sm">
+                    <div className="text-center">
+                      <div className="text-white font-semibold">{stats.followers_count}</div>
+                      <div className="text-gray-400 text-xs">Followers</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-white font-semibold">{stats.following_count}</div>
+                      <div className="text-gray-400 text-xs">Following</div>
+                    </div>
+                    {stats.is_followed_by && (
+                      <div className="text-center">
+                        <div className="text-cyan-400 text-xs bg-cyan-500/20 px-2 py-1 rounded-full border border-cyan-500/30">
+                          Follows you
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 mb-6">
+                    <Button
+                      onClick={() => toggleFollow(user.id)}
+                      disabled={actionLoading}
+                      className={`flex-1 py-3 rounded-xl transition-all ${
+                        stats.is_following
+                          ? 'bg-gray-600/50 hover:bg-gray-600/70 text-white border border-gray-500/30'
+                          : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
+                      }`}
+                    >
+                      {actionLoading ? (
+                        <div className="w-5 h-5 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
+                      ) : stats.is_following ? (
+                        <>
+                          <UserMinus className="w-5 h-5 mr-2" />
+                          Following
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-5 h-5 mr-2" />
+                          Follow
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      onClick={() => setShowFriendRequestModal(true)}
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-xl"
+                    >
+                      <MessageCircle className="w-5 h-5 mr-2" />
+                      Message
+                    </Button>
+                  </div>
                 </div>
               </div>
 

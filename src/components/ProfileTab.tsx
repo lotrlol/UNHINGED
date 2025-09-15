@@ -15,6 +15,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { useProfile } from '../hooks/useProfile';
 import { useAuth } from '../hooks/useAuth';
+import { useFollows } from '../hooks/useFollows';
 import { toast } from 'sonner';
 import { useContent } from '../hooks/useContent';
 import { AvatarUploader } from './AvatarUploader';
@@ -102,6 +103,7 @@ type LightboxContent = {
 
 export function ProfileTab() {
   const { profile, loading, error, uploadFile } = useProfile();
+  const { stats: followStats } = useFollows();
   const [profileState, setProfileState] = useState(profile);
   const { user } = useAuth();
   const [contentViewMode, setContentViewMode] = useState<ViewMode>('grid');
@@ -483,9 +485,9 @@ export function ProfileTab() {
             location={profileState?.location || undefined}
             bio={profileState?.tagline || undefined}
             stats={{
-              posts: 0,
-              followers: 0,
-              following: 0
+              posts: userContent?.length || 0,
+              followers: followStats.followers_count,
+              following: followStats.following_count
             }}
             onEditProfile={() => setShowEditModal(true)}
             onBannerChange={handleBannerChange}
