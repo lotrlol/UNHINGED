@@ -466,22 +466,7 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
                 
 
-                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                  {CREATIVE_TAGS.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                        formData.tags.includes(tag)
-                          ? 'bg-gradient-to-r from-purple-600/60 to-pink-600/60 text-white border border-purple-500/50 shadow-lg'
-                          : 'bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 hover:border-white/20'
-                      }`}
-                    >
-                      #{tag}
-                    </button>
-                  ))}
-                </div>
+               
 
                 {formData.tags.length > 0 && (
                   <div className="mt-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
