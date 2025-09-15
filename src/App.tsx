@@ -11,7 +11,7 @@ import { ProfileTab } from './components/ProfileTab';
 import { AuthModal } from './components/AuthModal';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
-import { HeaderNotifications } from './components/HeaderNotifications';
+
 import { HeaderNotifications } from './components/HeaderNotifications';
 import { useAuth } from './hooks/useAuth';
 import { useProfile } from './hooks/useProfile';

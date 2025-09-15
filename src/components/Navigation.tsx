@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Video, Heart, User, Compass } from 'lucide-react';
+import { Users, Video, MessageCircle, User, Compass } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { NavigationGlassCard } from './ui/GlassCard';
 
@@ -13,7 +13,7 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
     { id: 'collabs' as const, label: 'Collabs', icon: Users },
     { id: 'content' as const, label: 'Content', icon: Video },
     { id: 'discover' as const, label: 'Discover', icon: Compass },
-    { id: 'matches' as const, label: 'Messages', icon: Heart },
+    { id: 'matches' as const, label: 'Messages', icon: MessageCircle },
     { id: 'profile' as const, label: 'Profile', icon: User },
   ];
 
