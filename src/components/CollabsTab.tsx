@@ -16,6 +16,10 @@ import {
   Calendar,
   Star,
   ExternalLink,
+  User,
+  Tag,
+  Check,
+  Settings,
 } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { Badge } from './ui/Badge';
