@@ -110,7 +110,7 @@ export function ProfileTab() {
   const [contentViewMode, setContentViewMode] = useState<ViewMode>('grid');
   const [activeSection, setActiveSection] = useState<'content' | 'projects'>('content');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [, setShowEditModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const [lightboxContent, setLightboxContent] = useState<LightboxContent | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
