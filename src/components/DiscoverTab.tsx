@@ -6,6 +6,7 @@ import { useUserDiscovery } from '../hooks/useUserDiscovery'
 import { DiscoveryFilters as DiscoveryFiltersComponent } from './DiscoveryFilters'
 import { formatDate, getInitials } from '../lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useContent } from '../hooks/useContent'
 
 export function DiscoverTab() {
   const { users, allUsers, filters, loading, error, liking, likeUser, passUser, updateFilters } = useUserDiscovery()
@@ -17,6 +18,9 @@ export function DiscoverTab() {
   const [showFilters, setShowFilters] = useState(false)
 
   const currentUser = users[currentIndex]
+  
+  // Fetch content for the current user
+  const { content: userContent } = useContent(currentUser ? { creator_id: currentUser.id } : undefined)
 
   React.useEffect(() => {
     setCurrentIndex(0)
@@ -286,16 +290,66 @@ export function DiscoverTab() {
 
           {/* User Card */}
           <div className={`w-full h-full rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900/90 to-gray-900/70 backdrop-blur-xl border border-white/10 shadow-2xl cursor-grab active:cursor-grabbing select-none ${swipeDirection ? 'opacity-0' : ''}`}>
-            {/* Cover Image */}
-            <div className="relative h-3/5 overflow-hidden">
-              {currentUser.cover_url ? (
-                <img 
-                  src={currentUser.cover_url} 
-                  alt="cover" 
-                  className="w-full h-full object-cover" 
-                  draggable={false} 
-                />
+            {/* Content Slider Background */}
+            <div className="relative w-full h-full">
+              {userContent && userContent.length > 0 ? (
+                <div className="w-full h-full">
+                  {/* Content slides */}
+                  <div className="relative w-full h-full overflow-hidden">
+                    {userContent.slice(0, 3).map((content, index) => (
+                      <div
+                        key={content.id}
+                        className="absolute inset-0 w-full h-full"
+                        style={{
+                          transform: `translateX(${index * 100}%)`,
+                          transition: 'transform 0.5s ease-in-out'
+                        }}
+                      >
+                        {content.content_type === 'video' && content.external_url ? (
+                          <video
+                            src={content.external_url}
+                            className="w-full h-full object-cover"
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                          />
+                        ) : content.thumbnail_url ? (
+                          <img
+                            src={content.thumbnail_url}
+                            alt={content.title}
+                            className="w-full h-full object-cover"
+                            draggable={false}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-purple-600/60 to-pink-600/60 flex items-center justify-center">
+                            <span className="text-8xl text-white/20">
+                              {content.content_type === 'video' ? '🎥' : 
+                               content.content_type === 'image' ? '📸' : 
+                               content.content_type === 'audio' ? '🎵' : '📝'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Content indicators */}
+                  {userContent.length > 1 && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1">
+                      {userContent.slice(0, 3).map((_, index) => (
+                        <div
+                          key={index}
+                          className="w-8 h-1 bg-white/30 rounded-full overflow-hidden"
+                        >
+                          <div className="w-full h-full bg-white rounded-full" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
+                /* Fallback when no content */
                 <div className="w-full h-full bg-gradient-to-br from-purple-600/60 to-pink-600/60 flex items-center justify-center">
                   <span className="text-8xl text-white/20 font-bold">
                     {currentUser.full_name.charAt(0)}
@@ -303,129 +357,58 @@ export function DiscoverTab() {
                 </div>
               )}
               
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              {/* Dark gradient overlay for text readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
               
               {/* Verification badge */}
               {currentUser.is_verified && (
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 z-10">
                   <Badge className="bg-green-600/90 text-white border border-green-400 backdrop-blur-sm">
                     ✓ Verified
                   </Badge>
                 </div>
               )}
 
-              {/* User avatar */}
-              <div className="absolute -bottom-12 left-6 w-24 h-24 rounded-full border-4 border-white/80 bg-gray-800 overflow-hidden shadow-xl">
-                {currentUser.avatar_url ? (
-                  <img 
-                    src={currentUser.avatar_url} 
-                    alt={currentUser.full_name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-pink-600 text-white text-2xl font-bold">
-                    {currentUser.full_name.charAt(0)}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* User Info */}
-            <div className="h-2/5 p-6 pt-16 overflow-y-auto">
-              <div className="space-y-4">
+              {/* User Info Overlay */}
+              <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
                 {/* Name and username */}
-                <div>
-                  <h3 className="text-2xl font-bold text-white">{currentUser.full_name}</h3>
-                  <p className="text-gray-300">@{currentUser.username}</p>
+                <div className="mb-4">
+                  <h3 className="text-3xl font-bold text-white drop-shadow-lg">{currentUser.full_name}</h3>
+                  <p className="text-gray-200 text-lg drop-shadow-md">@{currentUser.username}</p>
                   {currentUser.tagline && (
-                    <p className="text-gray-400 italic mt-1">"{currentUser.tagline}"</p>
+                    <p className="text-gray-300 italic mt-2 drop-shadow-md">"{currentUser.tagline}"</p>
                   )}
                 </div>
 
-                {/* Roles */}
-                {currentUser.roles.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-4 h-4 text-purple-400" />
-                      <span className="text-sm text-gray-300 font-medium">Creator roles</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {currentUser.roles.slice(0, 4).map(role => (
-                        <Badge key={role} className="bg-purple-900/40 text-purple-200 border border-purple-700/50">
-                          {role}
-                        </Badge>
-                      ))}
-                      {currentUser.roles.length > 4 && (
-                        <Badge className="bg-purple-900/40 text-purple-200 border border-purple-700/50">
-                          +{currentUser.roles.length - 4}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Looking for */}
-                {currentUser.looking_for.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Heart className="w-4 h-4 text-pink-400" />
-                      <span className="text-sm text-gray-300 font-medium">Looking to work with</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {currentUser.looking_for.slice(0, 3).map(role => (
-                        <Badge key={role} className="bg-pink-900/40 text-pink-200 border border-pink-700/50">
-                          {role}
-                        </Badge>
-                      ))}
-                      {currentUser.looking_for.length > 3 && (
-                        <Badge className="bg-pink-900/40 text-pink-200 border border-pink-700/50">
-                          +{currentUser.looking_for.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Skills */}
-                {currentUser.skills.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="w-4 h-4 text-yellow-400" />
-                      <span className="text-sm text-gray-300 font-medium">Skills</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {currentUser.skills.slice(0, 3).map(skill => (
-                        <Badge key={skill} className="bg-yellow-900/40 text-yellow-200 border border-yellow-700/50">
-                          {skill}
-                        </Badge>
-                      ))}
-                      {currentUser.skills.length > 3 && (
-                        <Badge className="bg-yellow-900/40 text-yellow-200 border border-yellow-700/50">
-                          +{currentUser.skills.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Location and details */}
-                <div className="flex flex-wrap gap-3 text-sm text-gray-400">
-                  {currentUser.location && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" /> 
-                      {currentUser.location}
-                    </div>
-                  )}
-                  {currentUser.is_remote && (
-                    <Badge className="bg-blue-900/40 text-blue-200 border border-blue-700/50">
-                      🌍 Remote OK
+                {/* Quick info chips */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {/* Top role */}
+                  {currentUser.roles.length > 0 && (
+                    <Badge className="bg-black/50 text-white border border-white/20 backdrop-blur-sm">
+                      {currentUser.roles[0]}
                     </Badge>
                   )}
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" /> 
-                    Joined {formatDate(currentUser.created_at)}
-                  </div>
+                  
+                  {/* Location */}
+                  {currentUser.location && (
+                    <Badge className="bg-black/50 text-white border border-white/20 backdrop-blur-sm">
+                      📍 {currentUser.location}
+                    </Badge>
+                  )}
+                  
+                  {/* Remote */}
+                  {currentUser.is_remote && (
+                    <Badge className="bg-black/50 text-white border border-white/20 backdrop-blur-sm">
+                      🌍 Remote
+                    </Badge>
+                  )}
+                  
+                  {/* Content count */}
+                  {userContent && userContent.length > 0 && (
+                    <Badge className="bg-black/50 text-white border border-white/20 backdrop-blur-sm">
+                      {userContent.length} {userContent.length === 1 ? 'post' : 'posts'}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
