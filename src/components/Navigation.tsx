@@ -13,7 +13,7 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
     { id: 'collabs' as const, label: 'Collabs', icon: Users },
     { id: 'content' as const, label: 'Content', icon: Video },
     { id: 'discover' as const, label: 'Discover', icon: Compass },
-    { id: 'matches' as const, label: 'Friends', icon: Heart },
+    { id: 'matches' as const, label: 'Messages', icon: Heart },
     { id: 'profile' as const, label: 'Profile', icon: User },
   ];
 

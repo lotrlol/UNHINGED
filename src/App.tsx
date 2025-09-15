@@ -12,6 +12,7 @@ import { AuthModal } from './components/AuthModal';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { HeaderNotifications } from './components/HeaderNotifications';
+import { HeaderNotifications } from './components/HeaderNotifications';
 import { useAuth } from './hooks/useAuth';
 import { useProfile } from './hooks/useProfile';
 import { useProjects } from './hooks/useProjects';
@@ -184,6 +185,9 @@ const App: React.FC<AppProps> = () => {
   // Main app layout with glass effect
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white">
+      {/* Header Notifications */}
+      <HeaderNotifications />
+      
       {/* Header Notifications */}
       <HeaderNotifications />
       

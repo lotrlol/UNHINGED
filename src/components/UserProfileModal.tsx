@@ -23,6 +23,7 @@ interface UserProfileModalProps {
     is_remote?: boolean
     avatar_url: string | null
     cover_url?: string | null
+    banner_url?: string | null
     is_verified: boolean
     created_at: string
   } | null
