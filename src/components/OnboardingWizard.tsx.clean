@@ -1,0 +1,118 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, User, Users, Camera, Sparkles, Settings, X, Check } from 'lucide-react';
+
+// ... (imports and other code remain the same until the renderStep function)
+
+  const renderStep = () => {
+    switch (currentStep) {
+      // ... (previous cases remain the same)
+
+      case 6: // Preferences
+        return (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-xl font-medium text-white mb-2">Your Preferences</h3>
+              <p className="text-gray-400 text-sm mb-6">
+                Customize your experience and privacy settings.
+              </p>
+              
+              <div className="space-y-6">
+                {/* NSFW Preference */}
+                <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 pt-0.5">
+                      <div className="flex items-center h-5">
+                        <input
+                          id="nsfw-preference"
+                          name="nsfw-preference"
+                          type="checkbox"
+                          checked={profileData.nsfw_preference}
+                          onChange={(e) => updateProfileData({ nsfw_preference: e.target.checked })}
+                          className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="ml-3 text-sm">
+                      <label htmlFor="nsfw-preference" className="font-medium text-white">
+                        Show NSFW content
+                      </label>
+                      <p className="text-gray-400 mt-1">
+                        Enable this to view content that may not be suitable for all audiences.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Remote Work Preference */}
+                <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 pt-0.5">
+                      <div className="flex items-center h-5">
+                        <input
+                          id="remote-preference"
+                          name="remote-preference"
+                          type="checkbox"
+                          checked={profileData.is_remote}
+                          onChange={(e) => updateProfileData({ is_remote: e.target.checked })}
+                          className="h-4 w-4 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="ml-3 text-sm">
+                      <label htmlFor="remote-preference" className="font-medium text-white">
+                        Open to remote work
+                      </label>
+                      <p className="text-gray-400 mt-1">
+                        Let others know you're available for remote collaborations.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between pt-6">
+                <button
+                  onClick={handleBack}
+                  className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  className="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white transition-colors"
+                >
+                  Complete Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-xl font-medium text-white mb-2">Step not found</h3>
+              <p className="text-gray-400 text-sm mb-6">This step doesn't exist or is under development.</p>
+            </div>
+            <div className="flex justify-between pt-4">
+              <button
+                onClick={handleBack}
+                className={secondaryButtonClasses}
+              >
+                Back
+              </button>
+              <button
+                onClick={handleNext}
+                className={primaryButtonClasses}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  // ... (rest of the component remains the same)

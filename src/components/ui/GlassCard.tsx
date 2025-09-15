@@ -61,11 +61,32 @@ interface AuthGlassCardProps {
 }
 
 interface ProfileGlassCardProps {
-  children: React.ReactNode;
+  avatarUrl?: string;
+  name: string;
+  tagline?: string;
+  roles?: string[];
+  location?: string;
+  stats?: { label: string; value: string | number }[];
+  bio?: string;
+  footer?: React.ReactNode;
   className?: string;
   onClose?: () => void;
+  bannerImage?: React.ReactNode;
+  avatarImage?: React.ReactNode;
   title?: string;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
+  children?: React.ReactNode;
+  maxWidth?:
+    | 'sm'
+    | 'md'
+    | 'lg'
+    | 'xl'
+    | '2xl'
+    | '3xl'
+    | '4xl'
+    | '5xl'
+    | '6xl'
+    | '7xl'
+    | 'full';
 }
 
 interface NavigationGlassCardProps {
@@ -323,6 +344,17 @@ function ChatGlassCard({
                 <X className="w-5 h-5" />
               </button>
             )}
+            {avatarImage || (avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white text-4xl">
+                {name?.charAt(0).toUpperCase()}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -581,14 +613,24 @@ function AuthGlassCard({ children, className = '', title, onClose, ...props }: A
 }
 
 /* -------------------- ProfileGlassCard -------------------- */
-function ProfileGlassCard({ 
-  children, 
-  className = '', 
-  onClose, 
-  title,
+function ProfileGlassCard({
+  avatarUrl,
+  name,
+  tagline,
+  roles = [],
+  location,
+  stats = [],
+  bio,
+  footer,
+  className = '',
+  onClose,
+  bannerImage,
+  avatarImage,
   maxWidth = '2xl',
-  ...props 
-}: ProfileGlassCardProps) {
+  title,
+  children,
+  ...props
+}: ProfileGlassCardProps & { children?: React.ReactNode }) {
   const maxWidthClasses = {
     sm: 'max-w-sm',
     md: 'max-w-md',
@@ -605,40 +647,107 @@ function ProfileGlassCard({
 
   return (
     <div className={cn(
-      'relative rounded-2xl backdrop-blur-xl overflow-hidden',
-      'bg-gradient-to-br from-gray-900/80 to-gray-900/60',
-      'border border-white/10 shadow-2xl shadow-black/30',
-      'w-full',
+      'relative rounded-3xl overflow-hidden',
+      'bg-gradient-to-br from-gray-900/70 to-gray-900/90',
+      'border border-white/10 shadow-2xl shadow-black/40',
+      'w-full backdrop-blur-xl',
+      'transition-all duration-300 hover:shadow-3xl hover:shadow-purple-900/20',
       maxWidthClasses[maxWidth],
-      'max-h-[90vh] overflow-y-auto',
+      'overflow-hidden',
       className
     )} {...props}>
-      {/* Background gradients */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 via-transparent to-pink-600/10" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/5 to-transparent" />
+      {/* Animated background gradients */}
+      <div className="absolute inset-0 -z-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 via-transparent to-pink-600/5" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/3 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(168,85,247,0.1)_0%,rgba(236,72,153,0.1)_100%)]" />
+      </div>
+      
+      {/* Animated border highlight */}
+      <div className="absolute inset-0 rounded-3xl p-[1px] pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-transparent rounded-3xl animate-pulse-slow" />
       </div>
       
       {title && (
-        <div className="relative z-10 px-6 pt-6 pb-2">
+        <div className="relative z-10 px-8 pt-8 pb-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-white">{title}</h2>
+            <motion.h2 
+              className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              {title}
+            </motion.h2>
             {onClose && (
-              <button
+              <motion.button
                 onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-all duration-200"
                 aria-label="Close modal"
+                whileHover={{ scale: 1.05, rotate: 90 }}
+                whileTap={{ scale: 0.95 }}
               >
                 <X className="w-5 h-5" />
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
       )}
       
-      <div className="relative z-10">
-        {children}
+      {/* Banner Section */}
+      <div className="relative h-48 w-full overflow-hidden">
+        {bannerImage || (
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
       </div>
+      
+      {/* Avatar and Profile Info */}
+      <div className="relative px-6 -mt-16 mb-4">
+        <div className="flex items-end gap-4">
+          <div className="w-32 h-32 rounded-full border-4 border-white/80 bg-gray-800 overflow-hidden shadow-xl">
+            {avatarImage ? (
+              avatarImage
+            ) : avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-700 flex items-center justify-center text-white text-4xl">
+                {name?.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="mb-2">
+            <h2 className="text-2xl font-bold text-white">{name}</h2>
+            {tagline && (
+              <p className="text-gray-300 text-sm">{tagline}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 px-6">
+        {React.Children.map(children, (child, index) => (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ 
+              duration: 0.4, 
+              delay: 0.1 + (index * 0.05),
+              ease: [0.16, 1, 0.3, 1]
+            }}
+          >
+            {child}
+          </motion.div>
+        ))}
+      </div>
+      
+      {/* Subtle corner accents */}
+      <div className="absolute top-0 left-0 w-24 h-24 -translate-x-12 -translate-y-12 bg-purple-500/10 rounded-full filter blur-3xl" />
+      <div className="absolute bottom-0 right-0 w-32 h-32 translate-x-8 translate-y-8 bg-pink-500/10 rounded-full filter blur-3xl" />
     </div>
   );
 }

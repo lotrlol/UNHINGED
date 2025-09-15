@@ -244,6 +244,22 @@ export function DiscoverTab() {
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+            
+            {/* User avatar */}
+            <div className="absolute -bottom-10 left-6 w-20 h-20 rounded-full border-4 border-white/80 bg-gray-800 overflow-hidden shadow-lg">
+              {currentUser.avatar_url ? (
+                <img 
+                  src={currentUser.avatar_url} 
+                  alt={currentUser.full_name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-pink-600 text-white text-2xl font-bold">
+                  {currentUser.full_name.charAt(0)}
+                </div>
+              )}
+            </div>
+            
             {currentUser.is_verified && (
               <div className="absolute top-4 right-4">
                 <Badge className="bg-green-600/80 text-white border border-green-400">✓ Verified</Badge>
@@ -251,8 +267,8 @@ export function DiscoverTab() {
             )}
           </div>
 
-          {/* Info bottom half */}
-          <div className="p-6">
+          {/* Info bottom half - Add padding to accommodate the avatar */}
+          <div className="pt-10 px-6 pb-6">
             <h3 className="text-2xl font-bold text-white">{currentUser.full_name}</h3>
             <p className="text-gray-300 mb-3">@{currentUser.username}</p>
             {currentUser.tagline && <p className="text-gray-400 italic mb-4">"{currentUser.tagline}"</p>}

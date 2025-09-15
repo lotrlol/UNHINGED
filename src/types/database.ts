@@ -10,12 +10,15 @@ export interface Database {
           skills: string[]
           looking_for: string[]
           tagline: string | null
+          bio: string | null
           vibe_words: string[]
           location: string | null
           is_remote: boolean
           nsfw_preference: boolean
           avatar_url: string | null
           cover_url: string | null
+          banner_url: string | null
+          banner_path: string | null
           is_verified: boolean
           phone_verified: boolean
           flagged: boolean
@@ -30,12 +33,15 @@ export interface Database {
           skills?: string[]
           looking_for?: string[]
           tagline?: string | null
+          bio?: string | null
           vibe_words?: string[]
           location?: string | null
           is_remote?: boolean
           nsfw_preference?: boolean
           avatar_url?: string | null
           cover_url?: string | null
+          banner_url?: string | null
+          banner_path?: string | null
           is_verified?: boolean
           phone_verified?: boolean
           flagged?: boolean
@@ -49,6 +55,7 @@ export interface Database {
           skills?: string[]
           looking_for?: string[]
           tagline?: string | null
+          bio?: string | null
           vibe_words?: string[]
           location?: string | null
           is_remote?: boolean

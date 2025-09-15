@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, CheckCircle, AlertCircle, ArrowRight, User as UserIcon } from 'lucide-react';
+import { X, Mail, Lock, CheckCircle, AlertCircle, ArrowRight, LogIn, UserPlus } from 'lucide-react';
 import { AuthGlassCard } from './ui/GlassCard';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../lib/utils';
@@ -125,10 +125,30 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, onSuccess }: Au
               onClose={onClose}
               className="relative overflow-visible"
             >
+              {/* Auth Mode Tabs */}
+              <div className="flex border-b border-white/10 mb-6">
+                <button
+                  type="button"
+                  onClick={() => onModeChange('signin')}
+                  className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium transition-colors ${mode === 'signin' ? 'text-white border-b-2 border-purple-500' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <LogIn className="w-4 h-4" />
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onModeChange('signup')}
+                  className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium transition-colors ${mode === 'signup' ? 'text-white border-b-2 border-purple-500' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Create Account
+                </button>
+              </div>
+              
               <p className="text-gray-300 text-sm text-center mb-6">
                 {mode === 'signin' 
-                  ? 'Sign in to continue to your account' 
-                  : 'Get started with your free account'}
+                  ? 'Sign in to access your account and continue creating' 
+                  : 'Join our community of creators and start collaborating today'}
               </p>
               {error && (
                 <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-start gap-2">
@@ -198,14 +218,17 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, onSuccess }: Au
                 <div className="pt-2">
                   <motion.button
                     type="submit"
-                    className={cn(
-                      'w-full py-3 px-4 rounded-xl font-medium text-white bg-gradient-to-r from-purple-600 to-pink-600',
-                      'hover:shadow-lg hover:shadow-purple-500/20 transition-all flex items-center justify-center',
-                      'focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:ring-offset-2 focus:ring-offset-gray-900',
-                      'disabled:opacity-70 disabled:pointer-events-none'
-                    )}
-                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
+                    whileHover={{ scale: 1.02 }}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-medium transition-all',
+                      mode === 'signin' 
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600' 
+                        : 'bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700',
+                      'text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50',
+                      'disabled:opacity-70 disabled:cursor-not-allowed',
+                      loading && 'opacity-80'
+                    )}
                     disabled={loading}
                   >
                     {loading ? (
@@ -218,8 +241,14 @@ export function AuthModal({ isOpen, onClose, mode, onModeChange, onSuccess }: Au
                       </>
                     ) : (
                       <>
-                        <span>{mode === 'signin' ? 'Sign in' : 'Create account'}</span>
-                        <ArrowRight className="ml-2 w-4 h-4" />
+                        {loading ? (
+                          <span>Please wait...</span>
+                        ) : (
+                          <>
+                            <span>{mode === 'signin' ? 'Sign in' : 'Create account'}</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
                       </>
                     )}
                   </motion.button>

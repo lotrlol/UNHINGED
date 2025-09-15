@@ -3,22 +3,56 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
 import react from '@vitejs/plugin-react';
 
+// Load environment variables manually
+import dotenv from 'dotenv';
+import fs from 'fs';
+
+// Load .env file if it exists
+if (fs.existsSync('.env')) {
+  const envConfig = dotenv.parse(fs.readFileSync('.env'));
+  for (const k in envConfig) {
+    process.env[k] = envConfig[k];
+  }
+}
+
 export default defineConfig(({ mode }) => {
   // Load all environment variables
-  const env = loadEnv(mode, process.cwd(), '');
+  const env = {
+    ...process.env,
+    ...loadEnv(mode, process.cwd(), '')
+  };
   
-  // Log environment variables for debugging
-  console.log('Vite Env Mode:', mode);
-  console.log('Vite Env Variables:', {
-    VITE_SUPABASE_URL: env.VITE_SUPABASE_URL ? 'Set' : 'Not Set',
-    VITE_SUPABASE_ANON_KEY: env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Not Set'
-  });
+  // Required environment variables
+  const requiredVars = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'];
+  const missingVars = requiredVars.filter(varName => !env[varName]);
+  
+  if (missingVars.length > 0) {
+    console.warn('⚠️ Missing required environment variables:', missingVars.join(', '));
+    console.warn('Current working directory:', process.cwd());
+    console.warn('Environment file exists:', fs.existsSync('.env') ? 'Yes' : 'No');
+    console.warn('Environment file content:', fs.existsSync('.env') ? fs.readFileSync('.env', 'utf-8') : 'Not found');
+  } else {
+    console.log('✅ All required environment variables are set');
+    console.log('Supabase URL:', env.VITE_SUPABASE_URL ? 'Set' : 'Not Set');
+    console.log('Supabase Key:', env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Not Set');
+  }
+
+  // Expose environment variables to the client
+  const envWithProcess = {
+    'process.env': {
+      ...Object.entries(env).reduce((prev, [key, val]) => {
+        if (key.startsWith('VITE_')) {
+          return { ...prev, [key]: `"${val}"` };
+        }
+        return prev;
+      }, {}),
+      VITE_MODE: `"${mode}"`
+    },
+    __APP_ENV__: env.APP_ENV,
+  };
 
   return {
-    define: {
-      'process.env': { ...env, VITE_MODE: `"${mode}"` },
-      __APP_ENV__: env.APP_ENV,
-    },
+    define: envWithProcess,
     plugins: [
       react(),
       VitePWA({
@@ -153,12 +187,12 @@ export default defineConfig(({ mode }) => {
       exclude: [],
     },
     server: {
+      port: 5173,
+      host: true,
+      strictPort: true,
       watch: {
         usePolling: true,
       },
-      port: 3000,
-      host: true,
-      strictPort: true,
     },
     build: {
       outDir: 'dist',

@@ -14,6 +14,7 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { useAuth } from './hooks/useAuth';
 import { useProfile } from './hooks/useProfile';
 import { useProjects } from './hooks/useProjects';
+import { supabase } from './lib/supabase';
 
 type Tab = 'collabs' | 'content' | 'discover' | 'matches' | 'profile';
 
@@ -23,36 +24,49 @@ const App: React.FC<AppProps> = () => {
   const [activeTab, setActiveTab] = useState<Tab>('collabs')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [userClosedOnboarding, setUserClosedOnboarding] = useState(false)
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [mounted, setMounted] = useState(false)
   const { user, loading: authLoading } = useAuth()
   const { profile, loading: profileLoading } = useProfile();
-  const { projects, loading: projectsLoading, refetch: refetchProjects } = useProjects();
+  const { projects, refetch: refetchProjects } = useProjects();
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
-    if (user && !profileLoading && !profile && !authLoading && !showOnboarding) {
-      setShowOnboarding(true)
-    } else if (profile && profile.onboarding_completed) {
-      setShowOnboarding(false)
-    } else if (profile && !profile.onboarding_completed && !showOnboarding) {
-      setShowOnboarding(true)
+    // Only auto-show onboarding if user hasn't explicitly closed it
+    if (!userClosedOnboarding) {
+      if (user && !profileLoading && !authLoading) {
+        if (!profile) {
+          setShowOnboarding(true)
+        } else if (!profile.onboarding_completed) {
+          setShowOnboarding(true)
+        } else {
+          setShowOnboarding(false)
+        }
+      }
     }
-  }, [user, profile, profileLoading, authLoading, showOnboarding])
+  }, [user, profile, profileLoading, authLoading, userClosedOnboarding])
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false)
-    if (!profile && !showOnboarding) {
+    if (!profile && !userClosedOnboarding) {
       setShowOnboarding(true)
     }
   }
 
   const handleOnboardingComplete = () => {
-    setShowOnboarding(false)
-  }
+    setShowOnboarding(false);
+    // Any additional logic for when onboarding is completed successfully
+  };
+
+  const handleOnboardingClose = () => {
+    console.log('handleOnboardingClose called');
+    setShowOnboarding(false);
+    setUserClosedOnboarding(true); // Prevent auto-reopening
+  };
 
   const handleAuthModeChange = (mode: 'signin' | 'signup') => {
     setAuthMode(mode);
@@ -155,17 +169,36 @@ const App: React.FC<AppProps> = () => {
     );
   }
 
+  // Temporary logout function
+  const tempLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   // Main app layout with glass effect
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-purple-900/30">
-      {/* Background blobs */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-1/4 -left-4 w-96 h-96 bg-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-        <div className="absolute top-1/3 -right-4 w-96 h-96 bg-secondary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-1/2 w-96 h-96 bg-accent/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white">
+      {/* Temporary logout button */}
+      <button 
+        onClick={tempLogout}
+        className="fixed top-4 right-4 z-50 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-lg"
+      >
+        Logout
+      </button>
       
       <div className="min-h-screen flex flex-col bg-gray-900 text-gray-100">
+        {/* Background blobs */}
+        <div className="fixed inset-0 -z-10 overflow-hidden">
+          <div className="absolute top-1/4 -left-4 w-96 h-96 bg-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+          <div className="absolute top-1/3 -right-4 w-96 h-96 bg-secondary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+          <div className="absolute -bottom-8 left-1/2 w-96 h-96 bg-accent/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
+        </div>
+        
         {/* Main content area with padding to account for fixed navigation */}
         <main className="flex-1 container mx-auto px-4 py-6 pb-32 sm:pb-24">
           <AnimatePresence mode="wait">
@@ -216,7 +249,7 @@ const App: React.FC<AppProps> = () => {
         {showOnboarding && (
           <OnboardingWizard 
             isOpen={showOnboarding} 
-            onClose={handleOnboardingComplete}
+            onClose={handleOnboardingClose}
             onComplete={handleOnboardingComplete}
           />
         )}
