@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Share2, Plus, Heart } from 'lucide-react';
+import { MessageSquare, Share2, Plus, Heart, X } from 'lucide-react';
 import { ContentGlassCard } from './ui/GlassCard';
 import { formatDate, getInitials } from '../lib/utils';
 import { CreateContentModal } from './CreateContentModal';
 import { UserProfileModal } from './UserProfileModal';
 import { useContent, ContentPost as FetchedContentPost } from '../hooks/useContent';
+import { CommentSection } from './CommentSection';
+import { motion, AnimatePresence } from 'framer-motion';
 
 /* -------------------- VideoPlayer -------------------- */
 interface VideoPlayerProps {
@@ -218,6 +220,7 @@ const ContentTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [showComments, setShowComments] = useState<string | null>(null);
 
   const {
     content: fetchedContent,
@@ -368,9 +371,12 @@ const ContentTab: React.FC = () => {
                         <span className="text-sm">{item.like_count || 0}</span>
                       </button>
                       <button className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors">
-                        <MessageSquare className="w-5 h-5" />
+                    <button 
+                      onClick={() => setShowComments(showComments === item.id ? null : item.id)}
+                      className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors"
+                    >
                         <span className="text-sm">{(item as any).comment_count || 0}</span>
-                      </button>
+                      <span className="text-sm">{item.comment_count || 0}</span>
                       <button className="text-gray-400 hover:text-green-400 transition-colors">
                         <Share2 className="w-5 h-5" />
                       </button>
@@ -380,6 +386,29 @@ const ContentTab: React.FC = () => {
                     </span>
                   </div>
                 </div>
+
+                {/* Comments Section */}
+                <AnimatePresence>
+                  {showComments === item.id && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-4 pt-4 border-t border-white/10"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-medium text-white">Comments</h4>
+                        <button
+                          onClick={() => setShowComments(null)}
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <CommentSection contentId={item.id} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </ContentGlassCard>
             );
           })}

@@ -217,6 +217,7 @@ export interface Database {
           is_featured: boolean
           view_count: number
           like_count: number
+          comment_count: number
           created_at: string
           updated_at: string
         }
@@ -233,6 +234,7 @@ export interface Database {
           is_featured?: boolean
           view_count?: number
           like_count?: number
+          comment_count?: number
           created_at?: string
           updated_at?: string
         }
@@ -247,6 +249,7 @@ export interface Database {
           is_featured?: boolean
           view_count?: number
           like_count?: number
+          comment_count?: number
           updated_at?: string
         }
       }
@@ -276,6 +279,67 @@ export interface Database {
           id?: string
           content_id: string
           user_id?: string | null
+          created_at?: string
+        }
+        Update: {}
+      }
+      comments: {
+        Row: {
+          id: string
+          content_id: string
+          user_id: string
+          parent_id: string | null
+          content: string
+          mentioned_users: string[]
+          like_count: number
+          reply_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          content_id: string
+          user_id: string
+          parent_id?: string | null
+          content: string
+          mentioned_users?: string[]
+          like_count?: number
+          reply_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          mentioned_users?: string[]
+          updated_at?: string
+        }
+      }
+      comment_likes: {
+        Row: {
+          id: string
+          comment_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          comment_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {}
+      }
+      comment_mentions: {
+        Row: {
+          id: string
+          comment_id: string
+          mentioned_user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          comment_id: string
+          mentioned_user_id: string
           created_at?: string
         }
         Update: {}
