@@ -5,6 +5,7 @@ import { Badge } from './ui/Badge';
 import { getInitials, formatDate } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useContent } from '../hooks/useContent';
+import { SendFriendRequestModal } from './SendFriendRequestModal';
 
 interface UserProfileModalProps {
   isOpen: boolean
@@ -31,6 +32,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedContent, setSelectedContent] = useState<any>(null);
   const [currentContentIndex, setCurrentContentIndex] = useState(0);
+  const [showFriendRequestModal, setShowFriendRequestModal] = useState(false);
   
   // Fetch user's content
   const { content: userContent, loading: contentLoading } = useContent(user ? { creator_id: user.id } : undefined);
@@ -227,9 +229,10 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                   {/* Action Button */}
                   <Button
                     className="w-full mb-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-xl"
+                   onClick={() => setShowFriendRequestModal(true)}
                   >
                     <MessageCircle className="w-5 h-5 mr-2" />
-                    Send Message
+                   Send Friend Request
                   </Button>
                 </div>
               </div>
@@ -484,6 +487,17 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
           </AnimatePresence>
         </>
       )}
+
+      {/* Friend Request Modal */}
+      <SendFriendRequestModal
+        isOpen={showFriendRequestModal}
+        onClose={() => setShowFriendRequestModal(false)}
+        user={user}
+        onSuccess={() => {
+          setShowFriendRequestModal(false)
+          // Optionally show success message or close profile modal
+        }}
+      />
     </AnimatePresence>
   );
 }
