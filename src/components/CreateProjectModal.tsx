@@ -139,24 +139,47 @@ export function CreateProjectModal({ isOpen, onClose, onProjectCreated }: Create
     }
   }
 
-  const handleSubmit = async () => {
-    if (!user) return
+  const handleSubmit = async (e?: React.FormEvent) => {
+    // Prevent default form submission which causes page reload
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    console.log('=== Starting project submission ===');
+    console.log('Current user ID:', user?.id);
+    
+    if (!user) {
+      const errorMsg = 'No authenticated user found';
+      console.error(errorMsg);
+      setError(errorMsg);
+      return;
+    }
 
-    setLoading(true)
-    setError('')
-    setSuccess('')
+    setLoading(true);
+    setError('');
+    setSuccess('');
 
     try {
-      let cover_url = null
+      console.log('Raw project data:', projectData);
+      console.log('Project data to submit (stringified):', JSON.stringify(projectData, null, 2));
+      
+      let cover_url = null;
       
       // Upload cover image if provided
       if (projectData.cover_file) {
-        setError('Uploading cover image...')
-        cover_url = await uploadCoverImage(projectData.cover_file)
-        if (!cover_url) {
-          throw new Error('Failed to upload cover image')
+        console.log('Uploading cover image...');
+        try {
+          cover_url = await uploadCoverImage(projectData.cover_file);
+          if (!cover_url) {
+            throw new Error('Upload function returned null/undefined');
+          }
+          console.log('✅ Cover image uploaded successfully:', cover_url);
+        } catch (uploadError) {
+          console.error('❌ Cover image upload failed:', uploadError);
+          throw new Error(`Failed to upload cover image: ${uploadError.message}`);
         }
-        setError('') // Clear upload message
+      } else {
+        console.log('No cover image provided');
       }
 
       // Create project with proper typing
@@ -172,42 +195,70 @@ export function CreateProjectModal({ isOpen, onClose, onProjectCreated }: Create
         is_remote: projectData.is_remote,
         nsfw: projectData.nsfw,
         cover_url,
-      } as const;  // Add const assertion to fix type inference
+      };
 
-      console.log('Creating project with data:', projectDataToInsert)
+      console.log('Final project data being inserted:', JSON.stringify(projectDataToInsert, null, 2));
+      
+      // Log environment variables (without exposing sensitive data)
+      console.log('Environment:', {
+        nodeEnv: import.meta.env.MODE,
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing',
+        supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Missing',
+      });
 
-      // Use the type-safe insert helper function
-      const { data, error } = await insertIntoTable('projects', projectDataToInsert)
+      console.log('Attempting to insert into Supabase projects table...');
+      
+      try {
+        const { data, error } = await insertIntoTable('projects', projectDataToInsert);
+        
+        if (error) {
+          console.error('❌ Supabase error response:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+          });
+          throw new Error(`Database error: ${error.message}`);
+        }
 
-      if (error) {
-        console.error('Project creation error:', error)
-        throw new Error(`Failed to create project: ${error.message}`)
+        if (!data) {
+          throw new Error('No data returned from insert operation');
+        }
+
+        console.log('✅ Project created successfully:', data);
+        setSuccess('Project created successfully! 🎉');
+        
+        // Reset form
+        setProjectData({
+          title: '',
+          description: '',
+          roles_needed: [],
+          collab_type: 'Unpaid',
+          tags: [],
+          location: '',
+          is_remote: false,
+          nsfw: false,
+          cover_file: null,
+        });
+        
+        // Notify parent and close modal after a short delay
+        setTimeout(() => {
+          console.log('Closing modal and refreshing project list...');
+          onProjectCreated?.();
+          onClose();
+          setSuccess('');
+        }, 2000);
+        
+        return data;
+        
+      } catch (dbError) {
+        console.error('❌ Database operation failed:', {
+          error: dbError,
+          errorString: String(dbError),
+          stack: dbError.stack,
+        });
+        throw dbError;
       }
-
-      console.log('Project created successfully:', data)
-
-      setSuccess('Project created successfully! 🎉')
-      
-      // Reset form
-      setProjectData({
-        title: '',
-        description: '',
-        roles_needed: [],
-        collab_type: 'Unpaid',
-        tags: [],
-        location: '',
-        is_remote: false,
-        nsfw: false,
-        cover_file: null,
-      })
-      setCurrentStep(0)
-      
-      // Notify parent and close modal
-      setTimeout(() => {
-        onProjectCreated?.()
-        onClose()
-        setSuccess('')
-      }, 2000)
 
     } catch (err: any) {
       console.error('Error creating project:', err)
@@ -761,7 +812,7 @@ export function CreateProjectModal({ isOpen, onClose, onProjectCreated }: Create
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col h-full">
+        <form onSubmit={(e) => handleSubmit(e)} className="flex-1 flex flex-col h-full">
           <div className="flex-1 overflow-y-auto p-1 pb-24">
             {renderStep()}
           </div>

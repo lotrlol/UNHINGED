@@ -220,6 +220,7 @@ const ContentTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  // Initialize with null to keep comments collapsed by default
   const [showComments, setShowComments] = useState<string | null>(null);
 
   const {
@@ -371,11 +372,11 @@ const ContentTab: React.FC = () => {
                         <span className="text-sm">{item.like_count || 0}</span>
                       </button>
                       <button 
-                        onClick={() => setShowComments(item.id)}
+                        onClick={() => setShowComments(showComments === item.id ? null : item.id)}
                         className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors"
                       >
                         <MessageSquare className="w-5 h-5" />
-                        <span className="text-sm">{(item as any).comment_count || 0}</span>
+                        <span className="text-sm">{item.comment_count || 0}</span>
                       </button>
                       <button className="text-gray-400 hover:text-green-400 transition-colors">
                         <Share2 className="w-5 h-5" />
@@ -388,15 +389,13 @@ const ContentTab: React.FC = () => {
                 </div>
 
                 {/* Always show comments if there are any, max 3 */}
-                {(item.comment_count || 0) > 0 && (
+                {showComments === item.id && (
                   <div className="px-6 pb-4">
                     <div className="border-t border-white/10 pt-4">
                       <CommentSection 
                         contentId={item.id} 
-                        showPreview={showComments !== item.id}
-                        maxPreviewComments={3}
-                        onToggleExpand={() => setShowComments(showComments === item.id ? null : item.id)}
-                        isExpanded={showComments === item.id}
+                        showPreview={false}
+                        isExpanded={true}
                       />
                     </div>
                   </div>

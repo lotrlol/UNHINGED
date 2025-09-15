@@ -393,27 +393,17 @@ export function CommentSection({
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
         </div>
-      ) : comments.length === 0 ? (
-        !showPreview && (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-3">💬</div>
-            <h3 className="text-lg font-medium text-white mb-2">No comments yet</h3>
-            <p className="text-gray-400 text-sm">Be the first to share your thoughts!</p>
-          </div>
-        )
+      ) : comments.length === 0 || (showPreview && !isExpanded) ? (
+        <div className="text-center py-8">
+          <div className="text-4xl mb-3">💬</div>
+          <h3 className="text-lg font-medium text-white mb-2">No comments yet</h3>
+          <p className="text-gray-400 text-sm">Be the first to share your thoughts!</p>
+        </div>
       ) : (
         <div className="space-y-4">
-          {(showPreview && !isExpanded ? comments.slice(0, maxPreviewComments) : comments).map((comment) => (
+          {comments.map((comment) => (
             <CommentItem key={comment.id} comment={comment} />
           ))}
-          {showPreview && comments.length > maxPreviewComments && onToggleExpand && (
-            <button
-              onClick={onToggleExpand}
-              className="w-full text-center py-3 text-purple-400 hover:text-purple-300 transition-colors text-sm font-medium"
-            >
-              {isExpanded ? 'Show less' : `View all ${comments.length} comments`}
-            </button>
-          )}
         </div>
       )}
     </div>

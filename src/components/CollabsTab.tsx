@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Info,
   MapPin,
   Users,
   DollarSign,
@@ -20,15 +21,17 @@ import {
   Tag,
   Check,
   Settings,
+  Globe,
 } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { ProjectWithProfile, useProjects } from '../hooks/useProjects';
 import { formatDate, getInitials } from '../lib/utils';
-import { useProjectApplications } from '../hooks/useProjectApplications';
 import { CreateProjectModal } from './CreateProjectModal';
+import { useProjectApplications } from '../hooks/useProjectApplications';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 import { useProjectViews } from '../hooks/useProjectViews';
 import { ProjectCommentSection } from './ProjectCommentSection';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -79,7 +82,13 @@ export function CollabsTab({ onProjectCreated }: CollabsTabProps) {
   const handleProjectCreated = () => {
     setShowCreateModal(false);
     onProjectCreated?.();
-    fetchProjects(); // Refresh the list
+    // Refresh the list with current filters
+    const projectFilters = {
+      search: searchQuery || undefined,
+      collab_type: filters.collab_type || undefined,
+      is_remote: filters.is_remote,
+    };
+    fetchProjects(projectFilters);
   };
 
   const toggleProjectExpansion = (projectId: string) => {
@@ -92,10 +101,15 @@ export function CollabsTab({ onProjectCreated }: CollabsTabProps) {
   };
 
   const filteredProjects = projects.filter(project => {
-    // Only filter out own projects if show_own is explicitly false
+    // Show all projects by default, including your own
+    // Only filter out your own projects if show_own is explicitly set to false
     if (filters.show_own === false && project.creator_id === user?.id) {
       return false;
     }
+    // Check if the current user has already applied
+    const hasApplied = project.applications?.some(
+      (app: { user_id: string }) => app.user_id === user?.id
+    ) ?? false;
     return true;
   });
 
@@ -147,77 +161,111 @@ export function CollabsTab({ onProjectCreated }: CollabsTabProps) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl lg:text-3xl font-bold text-white">Collaborations</h2>
-            <p className="text-gray-300">
-              Discover and join creative projects
-            </p>
+            
           </div>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Project
-          </Button>
+          
         </div>
 
         {/* Search and Filters */}
-        <div className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <div className="space-y-2 w-full px-0">
+          <div className="relative flex items-center w-full">
+            <Search className="absolute left-3 text-gray-400 w-4 h-4" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search projects..."
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+              className="w-full pl-9 pr-3 py-2 text-sm rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
             />
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button
-              onClick={() => setShowFilters(!showFilters)}
-              variant="ghost"
-              className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
-            </Button>
+          <div className="flex flex-col w-full gap-3">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-7 px-3 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 flex items-center gap-1.5"
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  {showFilters ? 'Hide Filters' : 'Filter Projects'}
+                </Button>
+                
+                {(filters.collab_type || filters.is_remote !== undefined || !filters.show_own) && (
+                  <Button
+                    onClick={() => setFilters({
+                      collab_type: '',
+                      is_remote: undefined,
+                      show_own: true
+                    })}
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 px-2.5 text-gray-400 hover:text-white"
+                  >
+                    Clear All
+                  </Button>
+                )}
+              </div>
+            </div>
 
-            <button
-              onClick={() => setFilters(prev => ({ ...prev, show_own: !prev.show_own }))}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                filters.show_own
-                  ? 'bg-purple-600/40 text-white border border-purple-500/50'
-                  : 'bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10'
-              }`}
-            >
-              Show My Projects
-            </button>
+            {showFilters && (
+              <div className="bg-white/5 border border-white/10 rounded-lg p-3 space-y-3">
+                <div>
+                  <h4 className="text-xs font-medium text-gray-300 mb-2">Collaboration Type</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {['Paid', 'Unpaid', 'Revenue Split'].map((type) => (
+                      <Button
+                        key={type}
+                        onClick={() => setFilters(prev => ({
+                          ...prev,
+                          collab_type: prev.collab_type === type ? '' : type
+                        }))}
+                        variant={filters.collab_type === type ? 'primary' : 'ghost'}
+                        size="sm"
+                        className={`text-xs h-7 px-3 text-white ${
+                          filters.collab_type === type 
+                            ? 'bg-purple-600 hover:bg-purple-700' 
+                            : 'bg-white/5 hover:bg-white/10 text-white/90'
+                        }`}
+                      >
+                        {type}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Quick Filters */}
-            <select
-              value={filters.collab_type}
-              onChange={(e) => setFilters(prev => ({ ...prev, collab_type: e.target.value }))}
-              className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm"
-            >
-              <option value="">All Types</option>
-              <option value="Paid">Paid</option>
-              <option value="Unpaid">Unpaid</option>
-              <option value="Revenue Split">Revenue Split</option>
-            </select>
-
-            <select
-              value={filters.is_remote === undefined ? '' : filters.is_remote.toString()}
-              onChange={(e) => setFilters(prev => ({ 
-                ...prev, 
-                is_remote: e.target.value === '' ? undefined : e.target.value === 'true' 
-              }))}
-              className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm"
-            >
-              <option value="">All Locations</option>
-              <option value="true">Remote</option>
-              <option value="false">Local</option>
-            </select>
+                <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-white/10">
+                  <Button
+                    onClick={() => setFilters(prev => ({ ...prev, is_remote: !prev.is_remote }))}
+                    variant={filters.is_remote ? 'primary' : 'ghost'}
+                    size="sm"
+                    className={`text-xs h-7 px-3 text-white ${
+                      filters.is_remote 
+                        ? 'bg-purple-600 hover:bg-purple-700' 
+                        : 'bg-white/5 hover:bg-white/10 text-white/90'
+                    }`}
+                  >
+                    <Globe className="w-3 h-3 mr-1.5" />
+                    Remote Only
+                  </Button>
+                  
+                  <Button
+                    onClick={() => setFilters(prev => ({ ...prev, show_own: !prev.show_own }))}
+                    variant={!filters.show_own ? 'primary' : 'ghost'}
+                    size="sm"
+                    className={`text-xs h-7 px-3 text-white ${
+                      !filters.show_own 
+                        ? 'bg-purple-600 hover:bg-purple-700' 
+                        : 'bg-white/5 hover:bg-white/10 text-white/90'
+                    }`}
+                  >
+                    <User className="w-3 h-3 mr-1.5" />
+                    {filters.show_own ? 'Hide My Projects' : 'Showing My Projects'}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -287,25 +335,118 @@ interface ProjectThreadCardProps {
   project: ProjectWithProfile;
   isExpanded: boolean;
   isOwnProject: boolean;
-  hasApplied: boolean;
+  hasApplied?: boolean;
   onToggleExpand: () => void;
-  onApply: () => void;
-  applicationLoading: boolean;
+  onApply?: () => void;
+  applicationLoading?: boolean;
   commentCount: number;
 }
 
 function ProjectThreadCard({
-  project,
+  project: initialProject,
   isExpanded,
   isOwnProject,
-  hasApplied,
   onToggleExpand,
   onApply,
   applicationLoading,
   commentCount,
 }: ProjectThreadCardProps) {
   const [upvoted, setUpvoted] = useState(false);
-  const [upvotes, setUpvotes] = useState(Math.floor(Math.random() * 50) + 1); // Mock upvotes
+  const [upvotes, setUpvotes] = useState(Math.floor(Math.random() * 50) + 1);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showAddRole, setShowAddRole] = useState(false);
+  const [newRole, setNewRole] = useState('');
+  const [project, setProject] = useState<ProjectWithProfile & { views?: number }>({
+    ...initialProject,
+    description: initialProject.description || '',
+    views: 0, // Temporary until we have proper view tracking
+  });
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target as HTMLInputElement;
+    const checked = (e.target as HTMLInputElement).checked;
+    
+    setProject(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+  
+  // Comment out unused function for now
+  // const addTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  //   if (e.key === 'Enter' && newTag.trim()) {
+  //     e.preventDefault();
+  //     if (!project.tags.includes(newTag.trim())) {
+  //       setProject(prev => ({
+  //         ...prev,
+  //         tags: [...prev.tags, newTag.trim()]
+  //       }));
+  //     }
+  //     setNewTag('');
+  //   }
+  // };
+
+  // Comment out unused function for now
+  // const removeTag = (tagToRemove: string) => {
+  //   setProject(prev => ({
+  //     ...prev,
+  //     tags: prev.tags.filter(tag => tag !== tagToRemove)
+  //   }));
+  // };
+
+  // Comment out unused function for now
+  // const addRole = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  //   if (e.key === 'Enter' && newRole.trim()) {
+  //     e.preventDefault();
+  //     if (!project.roles_needed.includes(newRole.trim())) {
+  //       setProject(prev => ({
+  //         ...prev,
+  //         roles_needed: [...prev.roles_needed, newRole.trim()]
+  //       }));
+  //     }
+  //     setNewRole('');
+  //   }
+  // };
+
+  // Comment out unused function for now
+  // const removeRole = (roleToRemove: string) => {
+  //   setProject(prev => ({
+  //     ...prev,
+  //     roles_needed: prev.roles_needed.filter(role => role !== roleToRemove)
+  //   }));
+  // };
+  
+  const handleSave = async () => {
+    try {
+      // Prepare updates object with only the fields that exist in the schema
+      const updates = {
+        title: project.title,
+        description: project.description || '',
+        roles_needed: project.roles_needed
+        // Removed updated_at since it doesn't exist in the schema
+      };
+      
+      // Update the project in the database
+      const { error } = await supabase
+        .from('projects')
+        .update(updates)
+        .eq('id', project.id);
+
+      if (error) throw error;
+      
+      // Update the initial project data to match the saved state
+      Object.assign(initialProject, updates);
+      
+      // Reset editing state
+      setIsEditing(false);
+      setShowAddRole(false);
+      setNewRole('');
+    } catch (error) {
+      console.error('Error saving project:', error);
+      // Revert to initial state on error
+      setProject(initialProject);
+    }
+  };
 
   const handleUpvote = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -319,7 +460,22 @@ function ProjectThreadCard({
       animate={{ opacity: 1, y: 0 }}
       className="group relative z-10"
     >
-      <GlassCard className="overflow-hidden hover:bg-white/10 transition-all duration-200">
+      <GlassCard className="overflow-hidden hover:bg-white/10 transition-all duration-200 relative">
+        {/* Banner Background */}
+        {project.cover_url && (
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-30 group-hover:opacity-40 transition-all duration-500"
+            style={{
+              backgroundImage: `url(${project.cover_url})`,
+              backgroundPosition: 'center center',
+              backgroundSize: 'cover',
+              maskImage: 'linear-gradient(to left, black 0%, black 50%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to left, black 0%, black 50%, transparent 100%)',
+              zIndex: -1,
+              transform: 'scale(1.02)',
+            }}
+          />
+        )}
         {/* Thread Header - Always Visible */}
         <div 
           className="p-4 cursor-pointer"
@@ -362,9 +518,9 @@ function ProjectThreadCard({
                       </span>
                     )}
                   </div>
-                  <span className="text-purple-300">r/collabs</span>
+                
                   <span>•</span>
-                  <span>Posted by u/{project.creator_name}</span>
+                  <span>By {project.creator_name}</span>
                   {isOwnProject && (
                     <Badge className="bg-green-600/20 text-green-300 border-green-500/30 text-xs">
                       Your Project
@@ -376,9 +532,38 @@ function ProjectThreadCard({
               </div>
 
               {/* Title */}
-              <h3 className="text-lg font-semibold text-white mb-2 hover:text-purple-300 transition-colors">
-                {project.title}
-              </h3>
+              <div className="relative group">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    name="title"
+                    value={project.title}
+                    onChange={handleInputChange}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 text-lg font-semibold text-white mb-2 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    autoFocus
+                  />
+                ) : (
+                  <h3 
+                    className="text-lg font-semibold text-white mb-2 hover:text-purple-300 transition-colors cursor-text"
+                    onClick={() => isOwnProject && setIsEditing(true)}
+                  >
+                    {project.title}
+                    {isOwnProject && (
+                      <button 
+                        className="ml-2 text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsEditing(true);
+                        }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                        </svg>
+                      </button>
+                    )}
+                  </h3>
+                )}
+              </div>
 
               {/* Quick Info Tags */}
               <div className="flex flex-wrap gap-2 mb-3">
@@ -396,10 +581,50 @@ function ProjectThreadCard({
                 </Badge>
               </div>
 
-              {/* Description Preview */}
-              <p className="text-gray-300 text-sm line-clamp-2 mb-3">
-                {project.description}
-              </p>
+              {/* Description */}
+              <div className="relative group">
+                {isEditing ? (
+                  <textarea
+                    name="description"
+                    value={project.description}
+                    onChange={handleInputChange}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 mb-3 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    rows={3}
+                  />
+                ) : (
+                  <p 
+                    className="text-gray-300 text-sm line-clamp-2 mb-3 cursor-text whitespace-pre-line"
+                    onClick={() => isOwnProject && setIsEditing(true)}
+                  >
+                    {project.description || <span className="text-gray-500 italic">Add a description...</span>}
+                  </p>
+                )}
+              </div>
+              
+              {/* Edit Controls */}
+              {isEditing && (
+                <div className="flex justify-end gap-2 mb-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setProject(initialProject);
+                      setIsEditing(false);
+                    }}
+                    className="text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="primary" 
+                    size="sm"
+                    onClick={handleSave}
+                    className="text-xs"
+                  >
+                    Save Changes
+                  </Button>
+                </div>
+              )}
 
               {/* Thread Actions */}
               <div className="flex items-center gap-4 text-sm text-gray-400">
@@ -420,7 +645,7 @@ function ProjectThreadCard({
                 </button>
                 <div className="flex items-center gap-1 ml-auto">
                   <Eye className="w-4 h-4" />
-                  <span>{project.view_count || 0} views</span>
+                  <span>{project.views || 0} views</span>
                 </div>
               </div>
             </div>
@@ -435,98 +660,84 @@ function ProjectThreadCard({
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="overflow-hidden"
+              className="overflow-hidden relative"
             >
-              <div className="px-4 pb-4 border-t border-white/10">
+              {/* Background for expanded content */}
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800 z-[-1]" />
+              <div className="px-4 pb-4 border-t border-white/10 relative">
                 <div className="pt-4 space-y-6">
-                  {/* Cover Image */}
-                  {project.cover_url && (
-                    <div className="relative h-48 rounded-xl overflow-hidden">
-                      <img
-                        src={project.cover_url}
-                        alt={project.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    </div>
-                  )}
+                  {/* Project Header with Creator Info */}
+                  <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+                    {/* Project Cover Image */}
+                    {project.cover_url && (
+                      <div className="relative h-32 w-full sm:w-48 rounded-xl overflow-hidden flex-shrink-0">
+                        <img
+                          src={project.cover_url}
+                          alt={project.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                      </div>
+                    )}
+                    
+                    {/* Additional Project Details */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                      <Info className="w-4 h-4 text-blue-400" />
+                      Project Details
+                    </h4>
+                    {/* Additional project details can go here */}
+                  </div>
+                  </div>
 
                   {/* Full Description */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-white mb-3">Project Description</h4>
-                    <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-                      {project.description}
-                    </p>
+                  <div className="relative">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-lg font-semibold text-white">Project Description</h4>
+                      {isOwnProject && !isEditing && (
+                        <button 
+                          onClick={() => setIsEditing(true)}
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        <textarea
+                          name="description"
+                          value={project.description}
+                          onChange={handleInputChange}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          rows={5}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                        {project.description || <span className="text-gray-500 italic">No description provided</span>}
+                      </p>
+                    )}
                   </div>
 
                   {/* Detailed Info Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Roles Needed */}
                     <div>
-                      <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                        <Users className="w-4 h-4 text-purple-400" />
-                        Looking For
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {project.roles_needed.map((role) => (
-                          <Badge key={role} className="bg-purple-600/20 text-purple-300 border-purple-500/30">
-                            {role}
-                          </Badge>
-                        ))}
-                      </div>
+                     
+                     
+                      
                     </div>
 
                     {/* Creator Info */}
                     <div>
-                      <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                        <User className="w-4 h-4 text-pink-400" />
-                        Project Creator
-                      </h4>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center">
-                          {project.creator_avatar ? (
-                            <img
-                              src={project.creator_avatar}
-                              alt={project.creator_name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-white font-bold">
-                              {getInitials(project.creator_name || 'U')}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-white">{project.creator_name}</p>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {project.creator_roles?.slice(0, 2).map((role) => (
-                              <Badge key={role} className="bg-pink-600/20 text-pink-300 border-pink-500/30 text-xs">
-                                {role}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                      
                     </div>
                   </div>
 
-                  {/* Tags */}
-                  {project.tags.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                        <Tag className="w-4 h-4 text-cyan-400" />
-                        Tags
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {project.tags.map((tag) => (
-                          <Badge key={tag} className="bg-cyan-600/20 text-cyan-300 border-cyan-500/30">
-                            #{tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
+                 
                   {/* Project Details */}
                   <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
                     <div className="text-center">
@@ -547,27 +758,35 @@ function ProjectThreadCard({
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onApply();
+                          onApply && (
+                            <button
+                              onClick={onApply}
+                              disabled={applicationLoading || appliedProjects.has(project.id)}
+                              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                                appliedProjects.has(project.id)
+                                  ? 'bg-green-600/20 text-green-400 border border-green-500/30 cursor-not-allowed'
+                                  : 'bg-purple-600 hover:bg-purple-700 text-white'
+                              }`}
+                            >
+                              {applicationLoading ? (
+                                <span className="flex items-center gap-2">
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Applying...
+                                </span>
+                              ) : appliedProjects.has(project.id) ? (
+                                <span className="flex items-center gap-1">
+                                  <Check className="w-4 h-4" /> Applied
+                                </span>
+                              ) : (
+                                'Apply to Collaborate'
+                              )}
+                            </button>
+                          );
                         }}
-                        disabled={applicationLoading || hasApplied}
                         className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                       >
-                        {applicationLoading ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white/40 border-t-transparent rounded-full animate-spin mr-2" />
-                            Applying...
-                          </>
-                        ) : hasApplied ? (
-                          <>
-                            <Check className="w-4 h-4 mr-2" />
-                            Applied!
-                          </>
-                        ) : (
-                          <>
-                            <Heart className="w-4 h-4 mr-2" />
-                            Apply to Collaborate
-                          </>
-                        )}
+                        <Heart className="w-4 h-4 mr-2" />
+                        Apply to Collaborate
                       </Button>
                       <Button
                         variant="ghost"
