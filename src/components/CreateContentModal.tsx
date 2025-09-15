@@ -11,7 +11,6 @@ import {
   Link as LinkIcon,
   Check,
   Camera,
-  ChevronDown,
   Loader2,
 } from 'lucide-react'
 import { Button } from './ui/Button'
@@ -191,8 +190,6 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
     ((uploadMode === 'upload' && formData.media_file) ||
       (uploadMode === 'link' && formData.external_url.trim()))
 
-  const primaryTypes = CONTENT_TYPES.filter((t) => t.primary)
-
   if (!isOpen) return null
 
   return (
@@ -223,19 +220,19 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
           >
             <X className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-semibold text-white">Create New Content</h1>
-          <div className="w-10" /> {/* Spacer for centering */}
+          <h1 className="text-lg font-semibold text-white">Create Content</h1>
+          <div className="w-10" />
         </div>
 
-        {/* Scrollable Content */}
+        {/* Compact Form Layout */}
         <div className="h-full overflow-y-auto pb-20">
-          <div className="max-w-2xl mx-auto p-4 space-y-6">
+          <div className="max-w-4xl mx-auto p-4">
             {/* Error/Success Messages */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300"
+                className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 mb-4 text-sm"
               >
                 {error}
               </motion.div>
@@ -245,122 +242,116 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-300"
+                className="p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-300 mb-4 text-sm"
               >
                 {success}
               </motion.div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Basic Info Section */}
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <Camera className="w-5 h-5 text-purple-400" />
-                  <h3 className="text-lg font-semibold text-white">Content Details</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Top Row: Title + Description */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => updateFormData({ title: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
+                    placeholder="Enter a catchy title"
+                    required
+                    maxLength={100}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.title.length}/100
+                  </p>
                 </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Title *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) => updateFormData({ title: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
-                      placeholder="Enter a catchy title"
-                      required
-                      maxLength={100}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formData.title.length}/100 characters
-                    </p>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => updateFormData({ description: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all resize-none"
+                    placeholder="Describe your content..."
+                    maxLength={500}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.description.length}/500
+                  </p>
+                </div>
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Description
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => updateFormData({ description: e.target.value })}
-                      rows={4}
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all resize-none"
-                      placeholder="Describe your content..."
-                      maxLength={500}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formData.description.length}/500 characters
-                    </p>
+              {/* Second Row: Content Type + Upload Method */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Content Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Content Type *
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {CONTENT_TYPES.filter(t => t.primary).map((type) => {
+                      const Icon = type.icon
+                      return (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => updateFormData({ content_type: type.value })}
+                          className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border transition-all ${
+                            formData.content_type === type.value
+                              ? 'bg-gradient-to-r from-purple-600/40 to-pink-600/40 border-purple-500/50 text-white'
+                              : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                          <span className="text-sm font-medium">{type.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Upload Method */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    How to add content? *
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setUploadMode('upload')}
+                      className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl transition-all ${
+                        uploadMode === 'upload'
+                          ? 'bg-purple-600/50 text-white'
+                          : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
+                      }`}
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span className="text-sm font-medium">Upload</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUploadMode('link')}
+                      className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl transition-all ${
+                        uploadMode === 'link'
+                          ? 'bg-purple-600/50 text-white'
+                          : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
+                      }`}
+                    >
+                      <LinkIcon className="w-4 h-4" />
+                      <span className="text-sm font-medium">Link</span>
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* Content Type Section */}
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <FileText className="w-5 h-5 text-pink-400" />
-                  <h3 className="text-lg font-semibold text-white">Content Type</h3>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {primaryTypes.map((type) => {
-                    const Icon = type.icon
-                    return (
-                      <button
-                        key={type.value}
-                        type="button"
-                        onClick={() => updateFormData({ content_type: type.value })}
-                        className={`flex items-center justify-center gap-3 px-4 py-4 rounded-xl border transition-all ${
-                          formData.content_type === type.value
-                            ? 'bg-gradient-to-r from-purple-600/40 to-pink-600/40 border-purple-500/50 text-white shadow-lg'
-                            : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
-                        }`}
-                      >
-                        <Icon className="w-5 h-5" />
-                        <span className="font-medium">{type.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Upload Method Section */}
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <Upload className="w-5 h-5 text-cyan-400" />
-                  <h3 className="text-lg font-semibold text-white">How to add content?</h3>
-                </div>
-
-                <div className="flex bg-white/5 border border-white/10 rounded-xl overflow-hidden mb-6">
-                  <button
-                    type="button"
-                    onClick={() => setUploadMode('upload')}
-                    className={`flex-1 py-4 px-4 font-medium transition-all flex items-center justify-center gap-2 ${
-                      uploadMode === 'upload'
-                        ? 'bg-purple-600/50 text-white shadow-lg'
-                        : 'text-gray-300 hover:bg-white/5'
-                    }`}
-                  >
-                    <Upload className="w-4 h-4" />
-                    Upload File
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUploadMode('link')}
-                    className={`flex-1 py-4 px-4 font-medium transition-all flex items-center justify-center gap-2 ${
-                      uploadMode === 'link'
-                        ? 'bg-purple-600/50 text-white shadow-lg'
-                        : 'text-gray-300 hover:bg-white/5'
-                    }`}
-                  >
-                    <LinkIcon className="w-4 h-4" />
-                    External Link
-                  </button>
-                </div>
-
-                {/* File Upload or Link Input */}
+              {/* Media Upload/Link Section */}
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4">
                 {uploadMode === 'upload' ? (
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-3">
@@ -368,7 +359,7 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
                     </label>
                     <div
                       onClick={() => fileInputRef.current?.click()}
-                      className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
+                      className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
                         formData.media_file
                           ? 'border-green-500/30 bg-green-500/5'
                           : 'border-white/20 hover:border-purple-500/50 bg-white/5 hover:bg-white/10'
@@ -382,32 +373,32 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
                         className="hidden"
                       />
                       {formData.media_file ? (
-                        <div className="space-y-3">
-                          <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
-                            <Check className="w-8 h-8 text-green-400" />
+                        <div className="space-y-2">
+                          <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+                            <Check className="w-6 h-6 text-green-400" />
                           </div>
-                          <div className="space-y-1">
-                            <p className="font-medium text-green-300">{formData.media_file.name}</p>
-                            <p className="text-sm text-green-400">
+                          <div>
+                            <p className="font-medium text-green-300 text-sm">{formData.media_file.name}</p>
+                            <p className="text-xs text-green-400">
                               {(formData.media_file.size / (1024 * 1024)).toFixed(1)} MB
                             </p>
                           </div>
-                          <p className="text-xs text-gray-400">Tap to change file</p>
+                          <p className="text-xs text-gray-400">Tap to change</p>
                         </div>
                       ) : (
-                        <div className="space-y-3">
-                          <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto">
+                        <div className="space-y-2">
+                          <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto">
                             {formData.content_type === 'image' ? (
-                              <ImageIcon className="w-8 h-8 text-purple-400" />
+                              <ImageIcon className="w-6 h-6 text-purple-400" />
                             ) : (
-                              <Video className="w-8 h-8 text-purple-400" />
+                              <Video className="w-6 h-6 text-purple-400" />
                             )}
                           </div>
-                          <div className="space-y-1">
-                            <p className="font-medium text-gray-300">
-                              Tap to upload your {formData.content_type === 'image' ? 'image' : 'video'}
+                          <div>
+                            <p className="font-medium text-gray-300 text-sm">
+                              Tap to upload {formData.content_type}
                             </p>
-                            <p className="text-sm text-gray-400">
+                            <p className="text-xs text-gray-400">
                               {formData.content_type === 'image' ? 'JPG, PNG, GIF' : 'MP4, MOV, AVI'} up to 50MB
                             </p>
                           </div>
@@ -416,7 +407,7 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Content URL *
@@ -439,43 +430,44 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
                         type="text"
                         value={formData.platform}
                         onChange={(e) => updateFormData({ platform: e.target.value })}
-                        placeholder="e.g., YouTube, Instagram, SoundCloud"
+                        placeholder="YouTube, Instagram, etc."
                         className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
                       />
                     </div>
-
-                    {uploadMode === 'link' && formData.content_type === 'video' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Thumbnail URL (Optional)
-                        </label>
-                        <input
-                          type="url"
-                          value={formData.thumbnail_url}
-                          onChange={(e) => updateFormData({ thumbnail_url: e.target.value })}
-                          placeholder="https://example.com/thumbnail.jpg"
-                          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all"
-                        />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
 
-              {/* Tags Section */}
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+              {/* Tags Section - Compact */}
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4">
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Tags (Optional)
+                </label>
                 
-
-               
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                  {CREATIVE_TAGS.slice(0, 18).map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        formData.tags.includes(tag)
+                          ? 'bg-gradient-to-r from-purple-600/40 to-pink-600/40 border border-purple-500/50 text-white'
+                          : 'bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10'
+                      }`}
+                    >
+                      #{tag}
+                    </button>
+                  ))}
+                </div>
 
                 {formData.tags.length > 0 && (
-                  <div className="mt-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
-                    <p className="text-sm text-purple-300 mb-3 font-medium">Selected tags:</p>
-                    <div className="flex flex-wrap gap-2">
+                  <div className="mt-3 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                    <div className="flex flex-wrap gap-1">
                       {formData.tags.map((tag) => (
                         <Badge
                           key={tag}
-                          className="bg-purple-600/40 text-purple-200 border-purple-500/30 cursor-pointer hover:bg-red-600/40 hover:text-red-200 transition-colors"
+                          className="bg-purple-600/40 text-purple-200 border-purple-500/30 cursor-pointer hover:bg-red-600/40 hover:text-red-200 transition-colors text-xs"
                           onClick={() => toggleTag(tag)}
                         >
                           #{tag} ×
@@ -491,7 +483,7 @@ export function CreateContentModal({ isOpen, onClose, onContentCreated }: Create
 
         {/* Fixed Bottom Submit Button */}
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-gray-900 via-gray-900/95 to-transparent backdrop-blur-md border-t border-white/10">
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <motion.button
               type="submit"
               onClick={handleSubmit}
