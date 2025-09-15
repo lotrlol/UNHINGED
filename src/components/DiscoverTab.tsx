@@ -7,6 +7,7 @@ import { DiscoveryFilters as DiscoveryFiltersComponent } from './DiscoveryFilter
 import { formatDate, getInitials } from '../lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useContent } from '../hooks/useContent'
+import { UserProfileModal } from './UserProfileModal'
 
 export function DiscoverTab() {
   const { users, allUsers, filters, loading, error, liking, likeUser, passUser, updateFilters } = useUserDiscovery()
@@ -16,6 +17,7 @@ export function DiscoverTab() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [startPos, setStartPos] = useState({ x: 0, y: 0 })
   const [showFilters, setShowFilters] = useState(false)
+  const [showUserProfile, setShowUserProfile] = useState(false)
 
   const currentUser = users[currentIndex]
   
@@ -225,6 +227,17 @@ export function DiscoverTab() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* User Profile Modal */}
+      <AnimatePresence>
+        {showUserProfile && currentUser && (
+          <UserProfileModal
+            isOpen={showUserProfile}
+            onClose={() => setShowUserProfile(false)}
+            user={currentUser}
+          />
+        )}
+      </AnimatePresence>
     )
   }
 
@@ -289,7 +302,10 @@ export function DiscoverTab() {
           </div>
 
           {/* User Card */}
-          <div className={`w-full h-full rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900/90 to-gray-900/70 backdrop-blur-xl border border-white/10 shadow-2xl cursor-grab active:cursor-grabbing select-none ${swipeDirection ? 'opacity-0' : ''}`}>
+          <div 
+            className={`w-full h-full rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900/90 to-gray-900/70 backdrop-blur-xl border border-white/10 shadow-2xl cursor-grab active:cursor-grabbing select-none ${swipeDirection ? 'opacity-0' : ''}`}
+            onClick={() => setShowUserProfile(true)}
+          >
             {/* Content Slider Background */}
             <div className="relative w-full h-full">
               {userContent && userContent.length > 0 ? (
@@ -370,7 +386,7 @@ export function DiscoverTab() {
               )}
 
               {/* User Info Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
+              <div className="absolute bottom-0 left-0 right-0 p-6 z-10 pointer-events-none">
                 {/* Name and username */}
                 <div className="mb-4">
                   <h3 className="text-3xl font-bold text-white drop-shadow-lg">{currentUser.full_name}</h3>
@@ -409,6 +425,39 @@ export function DiscoverTab() {
                       {userContent.length} {userContent.length === 1 ? 'post' : 'posts'}
                     </Badge>
                   )}
+                </div>
+
+                {/* Integrated Action Buttons */}
+                <div className="flex gap-4 justify-center pointer-events-auto">
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handlePass()
+                    }}
+                    disabled={liking || swipeDirection !== null}
+                    className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500/90 to-red-600/90 backdrop-blur-md border border-red-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <X className="w-6 h-6" />
+                  </motion.button>
+                  
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleLike()
+                    }}
+                    disabled={liking || swipeDirection !== null}
+                    className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500/90 to-purple-600/90 backdrop-blur-md border border-pink-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {liking ? (
+                      <Loader2 className="w-7 h-7 animate-spin" />
+                    ) : (
+                      <Heart className="w-7 h-7" />
+                    )}
+                  </motion.button>
                 </div>
               </div>
             </div>
