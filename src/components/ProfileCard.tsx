@@ -338,7 +338,7 @@ export function ProfileCard({
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="bg-white/10 hover:bg-white/20 border-white/20 text-white backdrop-blur-sm"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 border-purple-500/50 text-white backdrop-blur-sm shadow-lg hover:shadow-purple-500/30 font-semibold"
                 onClick={onEditProfile}
               >
                 <Edit className="w-4 h-4 mr-2" />
