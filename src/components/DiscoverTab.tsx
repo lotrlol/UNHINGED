@@ -260,9 +260,9 @@ export function DiscoverTab() {
       </div>
 
       {/* Main Card Container */}
-      <div className="flex items-center justify-center h-full p-4">
+      <div className="flex items-center justify-center h-full p-4 pb-32">
         <motion.div
-          className="relative w-full max-w-sm h-[70vh] max-h-[600px]"
+          className="relative w-full max-w-sm h-[65vh] max-h-[550px]"
           style={{
             transform: isDragging ? `translateX(${dragOffset.x}px) translateY(${dragOffset.y * 0.1}px) rotate(${dragOffset.x * 0.1}deg)` : undefined,
             transition: isDragging ? 'none' : 'all 0.3s ease-out',
@@ -434,7 +434,7 @@ export function DiscoverTab() {
       </div>
 
       {/* Action Buttons */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex gap-8 z-50">
+      <div className="fixed bottom-32 left-1/2 -translate-x-1/2 flex gap-8 z-50">
         <motion.button
           onClick={handlePass}
           disabled={liking || swipeDirection !== null}
@@ -461,7 +461,7 @@ export function DiscoverTab() {
       </div>
 
       {/* Swipe hint */}
-      <div className="fixed bottom-32 left-1/2 -translate-x-1/2 text-center text-xs text-gray-400 z-50">
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 text-center text-xs text-gray-400 z-50">
         Swipe or use buttons • ← Pass • Like →
       </div>
 
