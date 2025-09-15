@@ -155,89 +155,91 @@ export function DiscoverTab() {
 
   if (!currentUser || currentIndex >= users.length) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900 flex items-center justify-center p-4">
-        {/* Filter Button */}
-        <button
-          onClick={() => setShowFilters(true)}
-          className="fixed top-6 right-6 z-50 p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white hover:bg-white/10 transition-all"
-        >
-          <Filter className="w-5 h-5" />
-        </button>
-
-        <div className="text-center max-w-md">
-          <div className="text-7xl mb-6 transform hover:scale-110 transition-transform duration-300">
-            {users.length === 0 ? '🔍' : '🎉'}
-          </div>
-          <h3 className="text-2xl font-bold text-white mb-3 bg-gradient-to-r from-purple-200 to-pink-200 bg-clip-text text-transparent">
-            {users.length === 0 ? 'No users match your filters' : 'No more users to discover'}
-          </h3>
-          <p className="text-gray-300/90 mb-8 leading-relaxed">
-            {users.length === 0
-              ? 'Try adjusting your filters to see more creators.'
-              : 'Check back later for new creators to connect with!'}
-          </p>
-          <Button
-            onClick={() => (users.length === 0 ? updateFilters({}) : setCurrentIndex(0))}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-all duration-300 px-8 py-3 rounded-xl shadow-lg hover:shadow-purple-500/20"
+      <>
+        <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900 flex items-center justify-center p-4">
+          {/* Filter Button */}
+          <button
+            onClick={() => setShowFilters(true)}
+            className="fixed top-6 right-6 z-50 p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white hover:bg-white/10 transition-all"
           >
-            {users.length === 0 ? 'Clear All Filters' : 'Start Over'}
-          </Button>
+            <Filter className="w-5 h-5" />
+          </button>
+
+          <div className="text-center max-w-md">
+            <div className="text-7xl mb-6 transform hover:scale-110 transition-transform duration-300">
+              {users.length === 0 ? '🔍' : '🎉'}
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-3 bg-gradient-to-r from-purple-200 to-pink-200 bg-clip-text text-transparent">
+              {users.length === 0 ? 'No users match your filters' : 'No more users to discover'}
+            </h3>
+            <p className="text-gray-300/90 mb-8 leading-relaxed">
+              {users.length === 0
+                ? 'Try adjusting your filters to see more creators.'
+                : 'Check back later for new creators to connect with!'}
+            </p>
+            <Button
+              onClick={() => (users.length === 0 ? updateFilters({}) : setCurrentIndex(0))}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-all duration-300 px-8 py-3 rounded-xl shadow-lg hover:shadow-purple-500/20"
+            >
+              {users.length === 0 ? 'Clear All Filters' : 'Start Over'}
+            </Button>
+          </div>
+
+          {/* Filters Slide-out */}
+          <AnimatePresence>
+            {showFilters && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+                  onClick={() => setShowFilters(false)}
+                />
+                <motion.div
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                  className="fixed top-0 right-0 h-full w-full max-w-md bg-gradient-to-br from-gray-900/95 to-gray-900/90 backdrop-blur-xl border-l border-white/10 z-50 overflow-y-auto"
+                >
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xl font-bold text-white">Filters</h3>
+                      <button
+                        onClick={() => setShowFilters(false)}
+                        className="p-2 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <DiscoveryFiltersComponent
+                      filters={filters}
+                      onFiltersChange={(newFilters) => {
+                        updateFilters(newFilters)
+                        setShowFilters(false)
+                      }}
+                      userCount={users.length}
+                      totalCount={allUsers.length}
+                    />
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Filters Slide-out */}
+        {/* User Profile Modal */}
         <AnimatePresence>
-          {showFilters && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-                onClick={() => setShowFilters(false)}
-              />
-              <motion.div
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                className="fixed top-0 right-0 h-full w-full max-w-md bg-gradient-to-br from-gray-900/95 to-gray-900/90 backdrop-blur-xl border-l border-white/10 z-50 overflow-y-auto"
-              >
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold text-white">Filters</h3>
-                    <button
-                      onClick={() => setShowFilters(false)}
-                      className="p-2 rounded-full hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                  <DiscoveryFiltersComponent
-                    filters={filters}
-                    onFiltersChange={(newFilters) => {
-                      updateFilters(newFilters)
-                      setShowFilters(false)
-                    }}
-                    userCount={users.length}
-                    totalCount={allUsers.length}
-                  />
-                </div>
-              </motion.div>
-            </>
+          {showUserProfile && currentUser && (
+            <UserProfileModal
+              isOpen={showUserProfile}
+              onClose={() => setShowUserProfile(false)}
+              user={currentUser}
+            />
           )}
         </AnimatePresence>
-      </div>
-
-      {/* User Profile Modal */}
-      <AnimatePresence>
-        {showUserProfile && currentUser && (
-          <UserProfileModal
-            isOpen={showUserProfile}
-            onClose={() => setShowUserProfile(false)}
-            user={currentUser}
-          />
-        )}
-      </AnimatePresence>
+      </>
     )
   }
 
@@ -304,6 +306,7 @@ export function DiscoverTab() {
           {/* User Card */}
           <div 
             className={`w-full h-full rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900/90 to-gray-900/70 backdrop-blur-xl border border-white/10 shadow-2xl cursor-grab active:cursor-grabbing select-none ${swipeDirection ? 'opacity-0' : ''}`}
+            onClick={() => setShowUserProfile(true)}
             onClick={() => setShowUserProfile(true)}
           >
             {/* Content Slider Background */}
@@ -432,6 +435,7 @@ export function DiscoverTab() {
                   <motion.button
                     onClick={(e) => {
                       e.stopPropagation()
+                      e.stopPropagation()
                       handlePass()
                     }}
                     disabled={liking || swipeDirection !== null}
@@ -444,6 +448,7 @@ export function DiscoverTab() {
                   
                   <motion.button
                     onClick={(e) => {
+                      e.stopPropagation()
                       e.stopPropagation()
                       handleLike()
                     }}
@@ -465,6 +470,16 @@ export function DiscoverTab() {
         </motion.div>
       </div>
 
+      {/* User Profile Modal */}
+      <AnimatePresence>
+        {showUserProfile && currentUser && (
+          <UserProfileModal
+            isOpen={showUserProfile}
+            onClose={() => setShowUserProfile(false)}
+            user={currentUser}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Swipe hint */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 text-center text-xs text-gray-400 z-50">
