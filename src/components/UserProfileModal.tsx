@@ -145,7 +145,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-gradient-to-br from-gray-900 via-purple-900/100 to-gray-900"
+            className="fixed inset-0 z-[100] bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900"
           >
             {/* Header */}
             <div className="relative z-10 flex items-center justify-between p-4 bg-black/40 backdrop-blur-md border-b border-white/10">
@@ -164,38 +164,53 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
               {/* User Info Section */}
               <div className="relative">
                 {/* Cover Background */}
-                <div className="h-48 relative overflow-hidden">
-                  {user.cover_url ? (
+                <div className="h-48 bg-gradient-to-br from-purple-600/40 to-pink-600/40 relative overflow-hidden">
+                  {user.cover_url && (
                     <img
                       src={user.cover_url}
                       alt="Cover"
                       className="w-full h-full object-cover"
                     />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-600/40 to-pink-600/40" />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
 
                 {/* User Details */}
-                <div className="px-6 -mt-12 relative z-10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-2xl font-bold text-white">{user.full_name}</h2>
-                    {user.is_verified && (
-                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
+                <div className="px-6 -mt-8 relative z-10">
+                  <div className="flex items-end gap-4 mb-4">
+                    <div className="w-20 h-20 rounded-2xl bg-black/50 backdrop-blur-md border-2 border-white/20 overflow-hidden flex items-center justify-center">
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.full_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-2xl font-bold text-white">
+                          {getInitials(user.full_name)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 pb-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h2 className="text-2xl font-bold text-white">{user.full_name}</h2>
+                        {user.is_verified && (
+                          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        )}
                       </div>
-                    )}
+                      <p className="text-gray-300">@{user.username}</p>
+                    </div>
                   </div>
-                  <p className="text-gray-300 mb-4">@{user.username}</p>
 
                   {/* Tagline */}
                   {user.tagline && (
-                    <p className="text-gray-300 mb-6 italic">"{user.tagline}"</p>
+                    <p className="text-gray-300 mb-4 italic">"{user.tagline}"</p>
                   )}
 
                   {/* Quick Stats */}
-                  <div className="flex items-center gap-4 mb-8 text-sm text-gray-400">
+                  <div className="flex items-center gap-4 mb-6 text-sm text-gray-400">
                     {user.location && (
                       <div className="flex items-center gap-1">
                         <MapPin className="w-4 h-4" />
@@ -211,7 +226,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
 
                   {/* Action Button */}
                   <Button
-                    className="w-full mb-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-xl"
+                    className="w-full mb-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-xl"
                   >
                     <MessageCircle className="w-5 h-5 mr-2" />
                     Send Message
