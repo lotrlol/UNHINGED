@@ -11,6 +11,7 @@ import { ProfileTab } from './components/ProfileTab';
 import { AuthModal } from './components/AuthModal';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { HeaderNotifications } from './components/HeaderNotifications';
 import { useAuth } from './hooks/useAuth';
 import { useProfile } from './hooks/useProfile';
 import { useProjects } from './hooks/useProjects';
@@ -183,13 +184,8 @@ const App: React.FC<AppProps> = () => {
   // Main app layout with glass effect
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white">
-      {/* Temporary logout button */}
-      <button 
-        onClick={tempLogout}
-        className="fixed top-4 right-4 z-50 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-lg"
-      >
-        Logout
-      </button>
+      {/* Header Notifications */}
+      <HeaderNotifications />
       
       <div className="min-h-screen flex flex-col bg-gray-900 text-gray-100">
         {/* Background blobs */}

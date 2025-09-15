@@ -166,13 +166,15 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
               {/* User Info Section */}
               <div className="relative">
                 {/* Cover Background */}
-                <div className="h-48 bg-gradient-to-br from-purple-600/40 to-pink-600/40 relative overflow-hidden">
-                  {user.cover_url && (
+                <div className="h-48 relative overflow-hidden">
+                  {(user.cover_url || user.banner_url) ? (
                     <img
-                      src={user.cover_url}
+                      src={user.cover_url || user.banner_url}
                       alt="Cover"
                       className="w-full h-full object-cover"
                     />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-600/40 to-pink-600/40" />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>

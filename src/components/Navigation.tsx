@@ -1,9 +1,7 @@
 import React from 'react';
-import { Users, Video, Heart, User, Compass, Bell } from 'lucide-react';
+import { Users, Video, Heart, User, Compass } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { NavigationGlassCard } from './ui/GlassCard';
-import { useFriendRequests } from '../hooks/useFriendRequests';
-import { FriendRequestsModal } from './FriendRequestsModal';
 
 interface NavigationProps {
   activeTab: 'collabs' | 'content' | 'discover' | 'matches' | 'profile';
@@ -11,10 +9,6 @@ interface NavigationProps {
 }
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
-  const [showFriendRequests, setShowFriendRequests] = React.useState(false)
-  const { receivedRequests } = useFriendRequests()
-  const pendingCount = receivedRequests.filter(req => req.status === 'pending').length
-
   const tabs = [
     { id: 'collabs' as const, label: 'Collabs', icon: Users },
     { id: 'content' as const, label: 'Content', icon: Video },
@@ -32,32 +26,8 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
       >
         <NavigationGlassCard className="w-full px-3 py-2">
 
-          {/* Tabs row */}
+          {/* Main tabs */}
           <div className="flex items-center justify-around gap-2">
-            {/* Friend Requests Bell */}
-            <motion.button
-              onClick={() => setShowFriendRequests(true)}
-              className="relative flex flex-col items-center justify-center px-3 py-2 rounded-xl transition-all duration-300 text-gray-300 hover:text-white"
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-            >
-              <div className="relative">
-                <Bell className="w-5 h-5" />
-                {pendingCount > 0 && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center"
-                  >
-                    <span className="text-white text-xs font-bold">
-                      {pendingCount > 9 ? '9+' : pendingCount}
-                    </span>
-                  </motion.div>
-                )}
-              </div>
-              <span className="text-xs mt-1 font-medium">Requests</span>
-            </motion.button>
-
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -88,12 +58,6 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
           </div>
         </NavigationGlassCard>
       </motion.div>
-
-      {/* Friend Requests Modal */}
-      <FriendRequestsModal
-        isOpen={showFriendRequests}
-        onClose={() => setShowFriendRequests(false)}
-      />
     </nav>
   );
 }
