@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Calendar, Users, Heart, Loader2 } from 'lucide-react';
+import { MessageCircle, Calendar, Users, Heart, Loader2, ChevronRight } from 'lucide-react';
 import { FriendsGlassCard } from './ui/GlassCard';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -7,6 +7,7 @@ import { useMatches } from '../hooks/useMatches';
 import { useAuth } from '../hooks/useAuth';
 import { formatDate, getInitials } from '../lib/utils';
 import { ChatModal } from './ChatModal';
+import { useChat } from '../hooks/useChat';
 
 export function MatchesTab() {
   const { user } = useAuth();
@@ -21,7 +22,6 @@ export function MatchesTab() {
 
   const handleOpenChat = (chatId: string | null) => {
     if (chatId) {
-      // Disable body scroll when modal is open
       document.body.style.overflow = 'hidden';
       setSelectedChatId(chatId);
       setShowChatModal(true);
@@ -29,7 +29,6 @@ export function MatchesTab() {
   };
 
   const handleCloseChat = () => {
-    // Re-enable body scroll when modal is closed
     document.body.style.overflow = 'auto';
     setShowChatModal(false);
     setSelectedChatId(null);
@@ -81,19 +80,19 @@ export function MatchesTab() {
       )}
       
       {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-2xl lg:text-3xl font-bold text-white">Your Connections</h2>
+      <div className="mb-6">
+        <h2 className="text-2xl lg:text-3xl font-bold text-white">Messages</h2>
         <p className="text-gray-300">
-          Connect and collaborate with your matches
+          Your ongoing conversations
         </p>
       </div>
 
-      {/* Matches List */}
+      {/* Chat List */}
       {matches.length === 0 ? (
         <FriendsGlassCard className="p-8 text-center">
           <div className="text-6xl mb-6">💫</div>
           <h3 className="text-xl font-semibold text-white mb-3">
-            No connections yet
+            No conversations yet
           </h3>
           <p className="text-gray-300 mb-6">
             Your perfect collaborators are waiting! Start connecting with creators now.
@@ -110,137 +109,13 @@ export function MatchesTab() {
           </Button>
         </FriendsGlassCard>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-2">
           {matches.map((match) => (
-            <FriendsGlassCard
+            <ChatListItem
               key={match.id}
-              className="mb-4 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20"
-              variant="elevated"
-            >
-              <div 
-                className="p-6 cursor-pointer"
-                onClick={() => handleOpenChat(match.chat_id)}
-              >
-                {/* User Avatar */}
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-purple-500/50 shadow-lg">
-                    {match.other_user.avatar_url ? (
-                      <img
-                        src={match.other_user.avatar_url}
-                        alt={match.other_user.full_name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                        <span className="text-white text-xl font-bold">
-                          {getInitials(match.other_user.full_name)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h3 className="font-bold text-lg text-white flex items-center gap-2">
-                      {match.other_user.full_name}
-                      {match.other_user.is_verified && (
-                        <Badge variant="success" size="sm" className="ml-1">✓</Badge>
-                      )}
-                    </h3>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {match.other_user.roles.slice(0, 3).map((role) => (
-                        <Badge 
-                          key={role}
-                          variant="secondary" 
-                          size="sm"
-                          className="bg-white/10 text-gray-200 hover:bg-white/20"
-                        >
-                          {role}
-                        </Badge>
-                      ))}
-                      {match.other_user.roles.length > 3 && (
-                        <Badge 
-                          variant="secondary" 
-                          size="sm"
-                          className="bg-white/10 text-gray-400 hover:bg-white/20"
-                        >
-                          +{match.other_user.roles.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Projects */}
-                    {match.projects.length > 0 && (
-                      <div className="mb-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
-                          <Users className="w-4 h-4" />
-                          <span>Shared Projects</span>
-                        </div>
-                        <div className="space-y-2">
-                          {match.projects.slice(0, 2).map((project) => (
-                            <div key={project.id} className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
-                              <div className="w-8 h-8 rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                                <span className="text-white text-xs font-bold">
-                                  {project.title.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <span className="text-sm text-white truncate">{project.title}</span>
-                            </div>
-                          ))}
-                          {match.projects.length > 2 && (
-                            <div className="text-xs text-gray-400 pl-10">
-                              +{match.projects.length - 2} more project{match.projects.length > 3 ? 's' : ''}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Match Type Badge */}
-                  <div className="flex items-center gap-2 mb-3">
-                      {match.match_type === 'both' && (
-                        <Badge variant="default" size="sm">
-                          <Heart className="w-3 h-3 mr-1 fill-current" />
-                          Multiple Matches
-                        </Badge>
-                      )}
-                      {match.match_type === 'project' && (
-                        <Badge variant="secondary" size="sm">
-                          <Users className="w-3 h-3 mr-1" />
-                          Project Match
-                        </Badge>
-                      )}
-                      {match.match_type === 'direct' && (
-                        <Badge variant="success" size="sm">
-                          <Heart className="w-3 h-3 mr-1 fill-current" />
-                          Direct Match
-                        </Badge>
-                      )}
-                    </div>
-
-                  {/* Bottom Row */}
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
-                    <div className="flex items-center gap-1.5 text-xs text-purple-200">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>Matched {formatDate(match.created_at)}</span>
-                    </div>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="bg-gradient-to-r from-purple-600 to-pink-500 text-white hover:opacity-90 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenChat(match.chat_id);
-                      }}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-1.5" />
-                      Message
-                    </Button>
-                </div>
-              </div>
-            </FriendsGlassCard>
+              match={match}
+              onOpenChat={handleOpenChat}
+            />
           ))}
         </div>
       )}
@@ -255,6 +130,141 @@ export function MatchesTab() {
           />
         </div>
       )}
+    </div>
+  );
+}
+
+// Chat List Item Component
+interface ChatListItemProps {
+  match: any;
+  onOpenChat: (chatId: string | null) => void;
+}
+
+function ChatListItem({ match, onOpenChat }: ChatListItemProps) {
+  const { messages, loading: messagesLoading } = useChat(match.chat_id);
+  const lastMessage = messages[messages.length - 1];
+  
+  // Format last message time
+  const formatMessageTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    } else if (diffInHours < 168) { // Less than a week
+      return date.toLocaleDateString('en-US', { weekday: 'short' });
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+  };
+
+  // Truncate message content
+  const truncateMessage = (content: string, maxLength: number = 50) => {
+    // Handle media messages
+    if (content.startsWith('[image]')) return '📷 Photo';
+    if (content.startsWith('[video]')) return '🎥 Video';
+    
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+  };
+
+  return (
+    <div
+      className="flex items-center gap-4 p-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl hover:bg-white/10 transition-all duration-200 cursor-pointer active:scale-[0.98]"
+      onClick={() => onOpenChat(match.chat_id)}
+    >
+      {/* Avatar */}
+      <div className="relative flex-shrink-0">
+        <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
+          {match.other_user.avatar_url ? (
+            <img
+              src={match.other_user.avatar_url}
+              alt={match.other_user.full_name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <span className="text-white text-lg font-bold">
+                {getInitials(match.other_user.full_name)}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        {/* Online status indicator (placeholder) */}
+        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+      </div>
+
+      {/* Chat Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-white truncate">
+              {match.other_user.full_name}
+            </h3>
+            {match.other_user.is_verified && (
+              <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs">✓</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Time */}
+          {lastMessage && (
+            <span className="text-xs text-gray-400 flex-shrink-0">
+              {formatMessageTime(lastMessage.created_at)}
+            </span>
+          )}
+        </div>
+
+        {/* Last Message */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-300 truncate flex-1">
+            {messagesLoading ? (
+              <span className="text-gray-500">Loading...</span>
+            ) : lastMessage ? (
+              <>
+                {lastMessage.sender_id === match.other_user.id ? '' : 'You: '}
+                {truncateMessage(lastMessage.content)}
+              </>
+            ) : (
+              <span className="text-gray-500 italic">Start a conversation...</span>
+            )}
+          </p>
+          
+          {/* Unread indicator and chevron */}
+          <div className="flex items-center gap-2 ml-2">
+            {/* Unread count placeholder */}
+            {false && (
+              <div className="w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-bold">2</span>
+              </div>
+            )}
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </div>
+        </div>
+
+        {/* Match context (projects) */}
+        {match.projects.length > 0 && (
+          <div className="mt-2 flex items-center gap-1">
+            <Users className="w-3 h-3 text-purple-400" />
+            <span className="text-xs text-purple-300">
+              {match.projects.length === 1 
+                ? match.projects[0].title 
+                : `${match.projects.length} shared projects`
+              }
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
