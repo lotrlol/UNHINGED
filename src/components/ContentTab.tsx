@@ -371,7 +371,7 @@ const ContentTab: React.FC = () => {
                         <span className="text-sm">{item.like_count || 0}</span>
                       </button>
                       <button 
-                        onClick={() => setShowComments(showComments === item.id ? null : item.id)}
+                        onClick={() => setShowComments(item.id)}
                         className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors"
                       >
                         <MessageSquare className="w-5 h-5" />
@@ -387,25 +387,50 @@ const ContentTab: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Comments Section */}
+                {/* Always show comments if there are any, max 3 */}
+                {((item as any).comment_count || 0) > 0 && (
+                  <div className="px-6 pb-4">
+                    <div className="border-t border-white/10 pt-4">
+                      <CommentSection 
+                        contentId={item.id} 
+                        showPreview={true}
+                        maxPreviewComments={3}
+                        onViewAll={() => setShowComments(item.id)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Full Comments Modal */}
                 <AnimatePresence>
                   {showComments === item.id && (
                     <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mt-4 pt-4 border-t border-white/10"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                      onClick={() => setShowComments(null)}
                     >
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-lg font-medium text-white">Comments</h4>
-                        <button
-                          onClick={() => setShowComments(null)}
-                          className="text-gray-400 hover:text-white transition-colors"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                      <CommentSection contentId={item.id} />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        className="bg-gradient-to-br from-gray-900/95 to-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-between p-6 border-b border-white/10">
+                          <h4 className="text-lg font-medium text-white">All Comments</h4>
+                          <button
+                            onClick={() => setShowComments(null)}
+                            className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto max-h-[60vh]">
+                          <CommentSection contentId={item.id} />
+                        </div>
+                      </motion.div>
                     </motion.div>
                   )}
                 </AnimatePresence>

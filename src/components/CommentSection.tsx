@@ -9,6 +9,9 @@ import { formatDate, getInitials } from '../lib/utils'
 interface CommentSectionProps {
   contentId: string
   className?: string
+  showPreview?: boolean
+  maxPreviewComments?: number
+  onViewAll?: () => void
 }
 
 interface UserSuggestion {
@@ -18,7 +21,13 @@ interface UserSuggestion {
   avatar_url: string | null
 }
 
-export function CommentSection({ contentId, className = '' }: CommentSectionProps) {
+export function CommentSection({ 
+  contentId, 
+  className = '', 
+  showPreview = false, 
+  maxPreviewComments = 3,
+  onViewAll 
+}: CommentSectionProps) {
   const { user } = useAuth()
   const { comments, loading, submitting, createComment, likeComment, deleteComment, searchUsers } = useComments(contentId)
   const [newComment, setNewComment] = useState('')
@@ -260,7 +269,7 @@ export function CommentSection({ contentId, className = '' }: CommentSectionProp
                   
                   {/* User Suggestions for Reply */}
                   {showUserSuggestions && userSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50 max-h-32 overflow-y-auto">
+                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-gray-800 rounded-lg shadow-lg border border-gray-700 z-50 max-h-32 overflow-y-auto">
                       {userSuggestions.map((suggestion) => (
                         <button
                           key={suggestion.id}
@@ -383,16 +392,26 @@ export function CommentSection({ contentId, className = '' }: CommentSectionProp
           <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
         </div>
       ) : comments.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="text-4xl mb-3">💬</div>
-          <h3 className="text-lg font-medium text-white mb-2">No comments yet</h3>
-          <p className="text-gray-400 text-sm">Be the first to share your thoughts!</p>
-        </div>
+        !showPreview && (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-3">💬</div>
+            <h3 className="text-lg font-medium text-white mb-2">No comments yet</h3>
+            <p className="text-gray-400 text-sm">Be the first to share your thoughts!</p>
+          </div>
+        )
       ) : (
         <div className="space-y-4">
-          {comments.map((comment) => (
+          {(showPreview ? comments.slice(0, maxPreviewComments) : comments).map((comment) => (
             <CommentItem key={comment.id} comment={comment} />
           ))}
+          {showPreview && comments.length > maxPreviewComments && onViewAll && (
+            <button
+              onClick={onViewAll}
+              className="w-full text-center py-3 text-purple-400 hover:text-purple-300 transition-colors text-sm font-medium"
+            >
+              View all {comments.length} comments
+            </button>
+          )}
         </div>
       )}
     </div>
