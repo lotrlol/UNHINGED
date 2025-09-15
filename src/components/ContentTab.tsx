@@ -365,6 +365,7 @@ const ContentTab: React.FC = () => {
                           item.user_has_liked ? 'text-pink-500' : 'text-gray-400'
                         }`}
                       >
+                       <MessageSquare className="w-5 h-5" />
                         <Heart 
                           className={`w-5 h-5 ${item.user_has_liked ? 'fill-current' : ''}`} 
                         />
@@ -376,7 +377,7 @@ const ContentTab: React.FC = () => {
                       className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors"
                     >
                         <span className="text-sm">{(item as any).comment_count || 0}</span>
-                      <span className="text-sm">{item.comment_count || 0}</span>
+                      </button>
                       <button className="text-gray-400 hover:text-green-400 transition-colors">
                         <Share2 className="w-5 h-5" />
                       </button>
