@@ -474,11 +474,11 @@ export function ProfileTab() {
             onAvatarChange={handleAvatarChange}
             className="w-full"
           />
-      </motion.div>
+        </motion.div>
 
-      <div className="relative -mt-16 mb-8">
-        <div className="flex items-end space-x-4">
-          <div className="relative">
+        <div className="relative -mt-16 mb-8">
+          <div className="flex items-end space-x-4">
+            <div className="relative">
             
             </div>
           </div>
@@ -487,272 +487,273 @@ export function ProfileTab() {
 
           
         </div>
-      </div>
       
-      <div className="relative">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-8 relative z-10"
-        >
-          {/* Content section */}
-          <GlassCard className="overflow-hidden">
-            <div className="p-6 border-b border-white/10">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-white">My Content</h3>
-                <div className="flex items-center gap-3">
-                  <div className="flex bg-black/40 rounded-lg p-1">
-                    <button
-                      onClick={() => setViewMode('grid')}
-                      className={`p-2 rounded-md transition-all ${
-                        viewMode === 'grid' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
-                      }`}
+        <div className="relative">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="mb-8 relative z-10"
+          >
+            {/* Content section */}
+            <GlassCard className="overflow-hidden">
+              <div className="p-6 border-b border-white/10">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white">My Content</h3>
+                  <div className="flex items-center gap-3">
+                    <div className="flex bg-black/40 rounded-lg p-1">
+                      <button
+                        onClick={() => setViewMode('grid')}
+                        className={`p-2 rounded-md transition-all ${
+                          viewMode === 'grid' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        <Grid3X3 size={18} />
+                      </button>
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={`p-2 rounded-md transition-all ${
+                          viewMode === 'list' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        <List size={18} />
+                      </button>
+                    </div>
+                    <Button
+                      onClick={handleCreateContent}
+                      variant="ghost"
+                      className="bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-white"
                     >
-                      <Grid3X3 size={18} />
-                    </button>
-                    <button
-                      onClick={() => setViewMode('list')}
-                      className={`p-2 rounded-md transition-all ${
-                        viewMode === 'list' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      <List size={18} />
-                    </button>
+                      <Plus size={16} className="mr-2" />
+                      Create
+                    </Button>
                   </div>
-                  <Button
-                    onClick={handleCreateContent}
-                    variant="ghost"
-                    className="bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-white"
-                  >
-                    <Plus size={16} className="mr-2" />
-                    Create
-                  </Button>
                 </div>
               </div>
-            </div>
             
-            {/* Content Grid/List */}
-            <div className="p-6">
-              {contentLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500" />
-                </div>
-              ) : contentError ? (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">⚠️</div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Error loading content</h3>
-                  <p className="text-gray-300 mb-4">{contentError}</p>
-                  <Button
-                    onClick={refetchContent}
-                    variant="primary"
-                    className="bg-gradient-to-r from-purple-600 to-pink-600"
-                  >
-                    Try Again
-                  </Button>
-                </div>
-              ) : userContent.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">📸</div>
-                  <h3 className="text-lg font-semibold text-white mb-2">No content yet</h3>
-                  <p className="text-gray-300 mb-6">Share your first piece of content to showcase your work</p>
-                  <Button
-                    onClick={handleCreateContent}
-                    variant="primary"
-                    className="bg-gradient-to-r from-purple-600 to-pink-600"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Your First Post
-                  </Button>
-                </div>
-              ) : (
-                <div className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4' : 'space-y-4'}>
-                  {userContent.map((item, index) => {
-                    const isSelected = selectedContentId === item.id;
-                    const thumbnailUrl = item.content_type === 'video' ? getVideoThumbnail(item) : item.thumbnail_url;
+              {/* Content Grid/List */}
+              <div className="p-6">
+                {contentLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500" />
+                  </div>
+                ) : contentError ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">⚠️</div>
+                    <h3 className="text-lg font-semibold text-white mb-2">Error loading content</h3>
+                    <p className="text-gray-300 mb-4">{contentError}</p>
+                    <Button
+                      onClick={refetchContent}
+                      variant="primary"
+                      className="bg-gradient-to-r from-purple-600 to-pink-600"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                ) : userContent.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">📸</div>
+                    <h3 className="text-lg font-semibold text-white mb-2">No content yet</h3>
+                    <p className="text-gray-300 mb-6">Share your first piece of content to showcase your work</p>
+                    <Button
+                      onClick={handleCreateContent}
+                      variant="primary"
+                      className="bg-gradient-to-r from-purple-600 to-pink-600"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Your First Post
+                    </Button>
+                  </div>
+                ) : (
+                  <div className={viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4' : 'space-y-4'}>
+                    {userContent.map((item, index) => {
+                      const isSelected = selectedContentId === item.id;
+                      const thumbnailUrl = item.content_type === 'video' ? getVideoThumbnail(item) : item.thumbnail_url;
                     
-                    return viewMode === 'grid' ? (
-                      /* Grid View */
-                      <div
-                        key={item.id}
-                        className="relative aspect-square bg-black/20 rounded-lg overflow-hidden cursor-pointer group hover:scale-105 transition-transform"
-                        onClick={() => handleContentClick(item, index)}
-                      >
-                        {item.content_type === 'video' ? (
-                          <VideoPlayer
-                            src={item.external_url}
-                            thumbnail={thumbnailUrl}
-                            title={item.title}
-                            className="w-full h-full"
-                          />
-                        ) : thumbnailUrl ? (
-                          <img
-                            src={thumbnailUrl}
-                            alt={item.title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = 'https://placehold.co/400x400/1a1a1a/666666?text=' + encodeURIComponent(getContentIcon(item.content_type));
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600/20 to-pink-600/20">
-                            <span className="text-4xl">{getContentIcon(item.content_type)}</span>
-                          </div>
-                        )}
-                        
-                        {/* Overlay */}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <div className="text-white text-center">
-                            <div className="text-2xl mb-1">{getContentIcon(item.content_type)}</div>
-                            <p className="text-xs font-medium truncate px-2">{item.title}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      /* List View */
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-4 p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
-                        onClick={() => handleContentClick(item, index)}
-                      >
-                        <div className="w-16 h-16 bg-black/20 rounded-lg overflow-hidden flex-shrink-0">
-                          {thumbnailUrl ? (
+                      return viewMode === 'grid' ? (
+                        /* Grid View */
+                        <div
+                          key={item.id}
+                          className="relative aspect-square bg-black/20 rounded-lg overflow-hidden cursor-pointer group hover:scale-105 transition-transform"
+                          onClick={() => handleContentClick(item, index)}
+                        >
+                          {item.content_type === 'video' ? (
+                            <VideoPlayer
+                              src={item.external_url}
+                              thumbnail={thumbnailUrl}
+                              title={item.title}
+                              className="w-full h-full"
+                            />
+                          ) : thumbnailUrl ? (
                             <img
                               src={thumbnailUrl}
                               alt={item.title}
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
-                                target.src = 'https://placehold.co/64x64/1a1a1a/666666?text=' + encodeURIComponent(getContentIcon(item.content_type));
+                                target.src = 'https://placehold.co/400x400/1a1a1a/666666?text=' + encodeURIComponent(getContentIcon(item.content_type));
                               }}
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="text-xl">{getContentIcon(item.content_type)}</span>
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600/20 to-pink-600/20">
+                              <span className="text-4xl">{getContentIcon(item.content_type)}</span>
                             </div>
                           )}
-                        </div>
                         
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-white truncate">{item.title}</h4>
-                          <p className="text-sm text-gray-300 truncate">{item.description || 'No description'}</p>
-                          <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
-                            <span>{getContentIcon(item.content_type)} {CONTENT_TYPES[item.content_type].label}</span>
-                            <span>{formatDate(item.created_at)}</span>
-                            <span>{item.view_count} views</span>
+                          {/* Overlay */}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="text-white text-center">
+                              <div className="text-2xl mb-1">{getContentIcon(item.content_type)}</div>
+                              <p className="text-xs font-medium truncate px-2">{item.title}</p>
+                            </div>
                           </div>
                         </div>
+                      ) : (
+                        /* List View */
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-4 p-4 bg-white/5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                          onClick={() => handleContentClick(item, index)}
+                        >
+                          <div className="w-16 h-16 bg-black/20 rounded-lg overflow-hidden flex-shrink-0">
+                            {thumbnailUrl ? (
+                              <img
+                                src={thumbnailUrl}
+                                alt={item.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = 'https://placehold.co/64x64/1a1a1a/666666?text=' + encodeURIComponent(getContentIcon(item.content_type));
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <span className="text-xl">{getContentIcon(item.content_type)}</span>
+                              </div>
+                            )}
+                          </div>
                         
-                        {isSelected && (
-                          <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </GlassCard>
-        </motion.div>
-        
-        {/* Create Content Modal */}
-        <CreateContentModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onContentCreated={handleContentCreated}
-        />
-        
-        {/* Lightbox for media content */}
-      {lightboxContent && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setLightboxContent(null)}
-        >
-          <div className="relative w-full max-w-4xl h-[80vh]">
-            {/* Close Button */}
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxContent(null);
-              }}
-              className="absolute left-4 p-3 text-white hover:bg-white/10 rounded-full transition-colors z-20"
-              aria-label="Previous"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-            
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate('next');
-              }}
-              className="absolute right-4 p-3 text-white hover:bg-white/10 rounded-full transition-colors z-20"
-              aria-label="Next"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </button>
-            
-            <div 
-              className="relative w-full h-full flex items-center justify-center" 
-              onClick={(e) => e.stopPropagation()}
-              onTouchStart={handleSwipeStart}
-              onTouchMove={handleSwipeMove}
-              onTouchEnd={handleSwipeEnd}
-              onMouseDown={handleSwipeStart}
-              onMouseMove={handleSwipeMove}
-              onMouseUp={handleSwipeEnd}
-              onMouseLeave={handleSwipeEnd}
-            >
-              <motion.div
-                key={currentIndex}
-                initial={{ opacity: 0, x: 100 }}
-                animate={{ 
-                  opacity: 1, 
-                  x: 0,
-                  transition: { 
-                    type: 'spring',
-                    stiffness: 300,
-                    damping: 30
-                  }
-                }}
-                exit={{ opacity: 0, x: -100 }}
-                className="w-full h-full flex items-center justify-center"
-              >
-                {lightboxContent.type === 'video' ? (
-                  <video
-                    src={lightboxContent.url}
-                    className="max-w-full max-h-full object-contain"
-                    controls
-                    autoPlay
-                    loop
-                    playsInline
-                  />
-                ) : (
-                  <img 
-                    src={lightboxContent.url} 
-                    alt={lightboxContent.title}
-                    className="max-w-full max-h-full object-contain"
-                  />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-white truncate">{item.title}</h4>
+                            <p className="text-sm text-gray-300 truncate">{item.description || 'No description'}</p>
+                            <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
+                              <span>{getContentIcon(item.content_type)} {CONTENT_TYPES[item.content_type].label}</span>
+                              <span>{formatDate(item.created_at)}</span>
+                              <span>{item.view_count} views</span>
+                            </div>
+                          </div>
+                        
+                          {isSelected && (
+                            <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
-              </motion.div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        
+          {/* Create Content Modal */}
+          <CreateContentModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onContentCreated={handleContentCreated}
+          />
+        
+          {/* Lightbox for media content */}
+          {lightboxContent && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+              onClick={() => setLightboxContent(null)}
+            >
+              <div className="relative w-full max-w-4xl h-[80vh]">
+                {/* Close Button */}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightboxContent(null);
+                  }}
+                  className="absolute left-4 p-3 text-white hover:bg-white/10 rounded-full transition-colors z-20"
+                  aria-label="Previous"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+            
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('next');
+                  }}
+                  className="absolute right-4 p-3 text-white hover:bg-white/10 rounded-full transition-colors z-20"
+                  aria-label="Next"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+            
+                <div 
+                  className="relative w-full h-full flex items-center justify-center" 
+                  onClick={(e) => e.stopPropagation()}
+                  onTouchStart={handleSwipeStart}
+                  onTouchMove={handleSwipeMove}
+                  onTouchEnd={handleSwipeEnd}
+                  onMouseDown={handleSwipeStart}
+                  onMouseMove={handleSwipeMove}
+                  onMouseUp={handleSwipeEnd}
+                  onMouseLeave={handleSwipeEnd}
+                >
+                  <motion.div
+                    key={currentIndex}
+                    initial={{ opacity: 0, x: 100 }}
+                    animate={{ 
+                      opacity: 1, 
+                      x: 0,
+                      transition: { 
+                        type: 'spring',
+                        stiffness: 300,
+                        damping: 30
+                      }
+                    }}
+                    exit={{ opacity: 0, x: -100 }}
+                    className="w-full h-full flex items-center justify-center"
+                  >
+                    {lightboxContent.type === 'video' ? (
+                      <video
+                        src={lightboxContent.url}
+                        className="max-w-full max-h-full object-contain"
+                        controls
+                        autoPlay
+                        loop
+                        playsInline
+                      />
+                    ) : (
+                      <img 
+                        src={lightboxContent.url} 
+                        alt={lightboxContent.title}
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    )}
+                  </motion.div>
               
-              {lightboxContent.title && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
-                  {lightboxContent.title}
+                  {lightboxContent.title && (
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
+                      {lightboxContent.title}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      )}
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
