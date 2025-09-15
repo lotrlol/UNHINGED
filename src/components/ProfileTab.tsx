@@ -344,17 +344,11 @@ export function ProfileTab() {
         return;
       }
       
-      // Update local state with the new banner URL
-      if (bannerUrl && profileState) {
-        setProfileState({
-          ...profileState,
-          banner_url: bannerUrl,
-          banner_path: bannerUrl // This will be updated when fetchProfile completes
-        });
-      }
+      // Force a complete profile refresh to get the new URLs
+      setTimeout(async () => {
+        await fetchProfile();
+      }, 500);
       
-      // Refresh profile data to ensure we have the latest from the database
-      await fetchProfile();
       toast.success('Banner updated successfully');
     } catch (error) {
       console.error('Error in handleBannerChange:', error);
@@ -377,17 +371,11 @@ export function ProfileTab() {
         return;
       }
       
-      // Update local state with the new avatar URL
-      if (avatarUrl && profileState) {
-        setProfileState({
-          ...profileState,
-          avatar_url: avatarUrl,
-          avatar_path: avatarUrl // This will be updated when fetchProfile completes
-        });
-      }
+      // Force a complete profile refresh to get the new URLs
+      setTimeout(async () => {
+        await fetchProfile();
+      }, 500);
       
-      // Refresh profile data to ensure we have the latest from the database
-      await fetchProfile();
       toast.success('Avatar updated successfully');
     } catch (error) {
       console.error('Error in handleAvatarChange:', error);

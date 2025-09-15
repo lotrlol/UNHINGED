@@ -34,18 +34,18 @@ export function useProfile() {
 
   const getPublicUrl = (path: string | null | undefined, bucket: 'avatars' | 'banners') => {
     if (!path) return null;
-    const { data: { publicUrl } } = supabase.storage
+    
+    // If it's already a full URL, return it as-is
+    if (path.startsWith('http')) {
+      return path;
+    }
+    
+    const { data } = supabase.storage
       .from(bucket)
-      .getPublicUrl(path, { 
-        download: false,
-        // Add cache-busting query parameter
-        transform: {
-          width: bucket === 'avatars' ? 400 : 1200,
-          quality: 80
-        }
-      });
+      .getPublicUrl(path);
+    
     // Add a cache-busting timestamp
-    return `${publicUrl}?t=${new Date().getTime()}`;
+    return `${data.publicUrl}?t=${new Date().getTime()}`;
   };
 
   const fetchProfile = async () => {
