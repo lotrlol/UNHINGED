@@ -50,12 +50,15 @@ export function CollabsTab({ onProjectCreated }: CollabsTabProps) {
 
   // Fetch all projects including user's own
   useEffect(() => {
-    fetchProjects({
-      search: searchQuery,
+    // Create filters object without excluding user's own projects
+    const projectFilters = {
+      search: searchQuery || undefined,
       collab_type: filters.collab_type || undefined,
       is_remote: filters.is_remote,
-    });
-  }, [searchQuery, filters, fetchProjects]);
+    };
+    
+    fetchProjects(projectFilters);
+  }, [searchQuery, filters.collab_type, filters.is_remote, fetchProjects]);
 
   const handleApply = async (projectId: string) => {
     const { error } = await applyToProject(projectId);
@@ -77,7 +80,8 @@ export function CollabsTab({ onProjectCreated }: CollabsTabProps) {
   };
 
   const filteredProjects = projects.filter(project => {
-    if (!filters.show_own && project.creator_id === user?.id) {
+    // Only filter out own projects if show_own is explicitly false
+    if (filters.show_own === false && project.creator_id === user?.id) {
       return false;
     }
     return true;

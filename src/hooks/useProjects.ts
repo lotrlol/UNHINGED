@@ -73,10 +73,8 @@ export const useProjects = () => {
         query = query.eq('is_remote', newFilters.is_remote);
       }
 
-      // Don't show user's own projects
-      if (user) {
-        query = query.neq('creator_id', user.id);
-      }
+      // Don't exclude user's own projects by default
+      // This filtering will be handled in the component if needed
 
       const { data, error } = await query;
 
