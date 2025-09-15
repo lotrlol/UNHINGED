@@ -156,7 +156,16 @@ export function useComments(contentId: string) {
           mentioned_users: mentionedUsers
         })
         .select(`
-          *,
+          id,
+          content_id,
+          user_id,
+          parent_id,
+          content,
+          mentioned_users,
+          like_count,
+          reply_count,
+          created_at,
+          updated_at,
           user:profiles!comments_user_id_fkey(
             id,
             username,
