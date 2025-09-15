@@ -29,6 +29,8 @@ import { formatDate, getInitials } from '../lib/utils';
 import { useProjectApplications } from '../hooks/useProjectApplications';
 import { CreateProjectModal } from './CreateProjectModal';
 import { useAuth } from '../hooks/useAuth';
+import { useProjectViews } from '../hooks/useProjectViews';
+import { ProjectCommentSection } from './ProjectCommentSection';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CollabsTabProps {
@@ -41,6 +43,7 @@ export function CollabsTab({ onProjectCreated }: CollabsTabProps) {
   const { user } = useAuth();
   const { projects, loading, error, fetchProjects } = useProjects();
   const { applyToProject, loading: applicationLoading } = useProjectApplications();
+  const { recordView } = useProjectViews();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [appliedProjects, setAppliedProjects] = useState<Set<string>>(new Set());
@@ -81,6 +84,11 @@ export function CollabsTab({ onProjectCreated }: CollabsTabProps) {
 
   const toggleProjectExpansion = (projectId: string) => {
     setExpandedProject(expandedProject === projectId ? null : projectId);
+    
+    // Record view when project is expanded
+    if (expandedProject !== projectId) {
+      recordView(projectId);
+    }
   };
 
   const filteredProjects = projects.filter(project => {
@@ -92,6 +100,16 @@ export function CollabsTab({ onProjectCreated }: CollabsTabProps) {
   });
 
   const isOwnProject = (project: ProjectWithProfile) => project.creator_id === user?.id;
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+
+  // Update comment counts when projects change
+  useEffect(() => {
+    const counts: Record<string, number> = {};
+    projects.forEach(project => {
+      counts[project.id] = project.comment_count || 0;
+    });
+    setCommentCounts(counts);
+  }, [projects]);
 
   if (loading) {
     return (
@@ -235,6 +253,7 @@ export function CollabsTab({ onProjectCreated }: CollabsTabProps) {
               onToggleExpand={() => toggleProjectExpansion(project.id)}
               onApply={() => handleApply(project.id)}
               applicationLoading={applicationLoading}
+              commentCount={commentCounts[project.id] || project.comment_count || 0}
             />
           ))}
         </div>
@@ -272,6 +291,7 @@ interface ProjectThreadCardProps {
   onToggleExpand: () => void;
   onApply: () => void;
   applicationLoading: boolean;
+  commentCount: number;
 }
 
 function ProjectThreadCard({
@@ -282,6 +302,7 @@ function ProjectThreadCard({
   onToggleExpand,
   onApply,
   applicationLoading,
+  commentCount,
 }: ProjectThreadCardProps) {
   const [upvoted, setUpvoted] = useState(false);
   const [upvotes, setUpvotes] = useState(Math.floor(Math.random() * 50) + 1); // Mock upvotes
@@ -387,7 +408,7 @@ function ProjectThreadCard({
                   className="flex items-center gap-1 hover:text-white transition-colors"
                 >
                   <MessageSquare className="w-4 h-4" />
-                  <span>{Math.floor(Math.random() * 20)} comments</span>
+                  <span>{commentCount} comments</span>
                 </button>
                 <button className="flex items-center gap-1 hover:text-white transition-colors">
                   <ExternalLink className="w-4 h-4" />
@@ -399,7 +420,7 @@ function ProjectThreadCard({
                 </button>
                 <div className="flex items-center gap-1 ml-auto">
                   <Eye className="w-4 h-4" />
-                  <span>{Math.floor(Math.random() * 500) + 50} views</span>
+                  <span>{project.view_count || 0} views</span>
                 </div>
               </div>
             </div>
@@ -576,6 +597,19 @@ function ProjectThreadCard({
                       </Button>
                     </div>
                   )}
+
+                  {/* Comments Section */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-blue-400" />
+                      Comments ({commentCount})
+                    </h4>
+                    <ProjectCommentSection 
+                      projectId={project.id}
+                      showPreview={false}
+                      isExpanded={true}
+                    />
+                  </div>
                 </div>
               </div>
             </motion.div>
