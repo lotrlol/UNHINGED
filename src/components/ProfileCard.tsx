@@ -209,8 +209,9 @@ export function ProfileCard({
     setPreviewAvatar(null);
     if (avatarInputRef.current) avatarInputRef.current.value = '';
     // You might want to handle avatar removal on the server here
-            avatarUrl={profileState?.avatar_url || undefined}
-            bannerUrl={profileState?.banner_url || profileState?.cover_url || undefined}
+  };
+
+  return (
     <div className={cn('w-full overflow-hidden', className)}>
       {/* Banner */}
       <div 
