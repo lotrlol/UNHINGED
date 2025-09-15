@@ -365,17 +365,16 @@ const ContentTab: React.FC = () => {
                           item.user_has_liked ? 'text-pink-500' : 'text-gray-400'
                         }`}
                       >
-                       <MessageSquare className="w-5 h-5" />
                         <Heart 
                           className={`w-5 h-5 ${item.user_has_liked ? 'fill-current' : ''}`} 
                         />
                         <span className="text-sm">{item.like_count || 0}</span>
                       </button>
-                      <button className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors">
-                    <button 
-                      onClick={() => setShowComments(showComments === item.id ? null : item.id)}
-                      className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors"
-                    >
+                      <button 
+                        onClick={() => setShowComments(showComments === item.id ? null : item.id)}
+                        className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors"
+                      >
+                        <MessageSquare className="w-5 h-5" />
                         <span className="text-sm">{(item as any).comment_count || 0}</span>
                       </button>
                       <button className="text-gray-400 hover:text-green-400 transition-colors">
