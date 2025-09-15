@@ -97,15 +97,24 @@ export function useProfile() {
 
       try {
         setLoading(true);
+        setError(null);
+        
+        console.log('Loading profile for user:', user.id);
+        
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error loading profile:', error);
+          throw error;
+        }
         
         if (profile) {
+          console.log('Profile data loaded:', profile);
+          
           // Generate fresh URLs for avatar and banner
           const profileWithUrls = {
             ...profile,
@@ -113,7 +122,16 @@ export function useProfile() {
             banner_url: profile.banner_path ? getPublicUrl(profile.banner_path, 'banners') : null
           };
           
+          console.log('Profile with URLs:', {
+            ...profileWithUrls,
+            avatar_url: profileWithUrls.avatar_url ? 'Generated' : 'None',
+            banner_url: profileWithUrls.banner_url ? 'Generated' : 'None'
+          });
+          
           setProfile(profileWithUrls);
+        } else {
+          console.log('No profile found for user:', user.id);
+          setProfile(null);
         }
       } catch (error) {
         console.error('Error loading profile:', error);

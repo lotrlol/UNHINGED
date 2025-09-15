@@ -113,6 +113,14 @@ export function ProfileTab() {
   const [[x, y], setXY] = useState([0, 0]);
   const [uploading, setUploading] = useState(false);
 
+  // Sync local state with profile data
+  useEffect(() => {
+    if (profile) {
+      console.log('Profile updated in ProfileTab:', profile);
+      setProfileState(profile);
+    }
+  }, [profile]);
+
   // Fetch user's content
   const {
     content: userContent,
@@ -299,15 +307,24 @@ export function ProfileTab() {
     if (!user) return;
     
     try {
+      console.log('Manually fetching profile for user:', user.id);
+      
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profile:', error);
+        throw error;
+      }
+      
       if (profileData) {
+        console.log('Fetched profile data:', profileData);
         setProfileState(profileData);
+      } else {
+        console.log('No profile data found');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
