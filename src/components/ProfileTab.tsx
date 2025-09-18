@@ -134,11 +134,14 @@ export function ProfileTab() {
 
   // Fetch user's content
   const {
-    content: userContent,
+    content: allContent,
     loading: contentLoading,
     error: contentError,
     refetch: refetchContent,
-  } = useContent(user?.id ? { creator_id: user.id } : { creator_id: '' });
+  } = useContent({});
+
+  // Filter content to only show current user's content
+  const userContent = allContent.filter(item => item.creator_id === user?.id);
 
   // Filter only media content for the lightbox
   const mediaContent = (userContent || []).filter((item: ContentItem): item is ContentItem & { content_type: 'video' | 'image' } => 
@@ -507,41 +510,20 @@ export function ProfileTab() {
         >
           {/* Content header with view controls */}
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">My Content</h3>
-            <div className="flex items-center gap-3">
-              <div className="flex bg-black/40 rounded-lg p-1 backdrop-blur-sm border border-white/10">
-                <button
-                  onClick={() => setContentViewMode('grid')}
-                  className={`p-2 rounded-md transition-all ${
-                    contentViewMode === 'grid' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  <Grid3X3 size={18} />
-                </button>
-                <button
-                  onClick={() => setContentViewMode('list')}
-                  className={`p-2 rounded-md transition-all ${
-                    contentViewMode === 'list' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  <List size={18} />
-                </button>
-              </div>
-              <Button
-                onClick={handleCreateContent}
-                variant="ghost"
-                className="bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-white backdrop-blur-sm border border-purple-500/20"
-              >
-                <Plus size={16} className="mr-2" />
-                Create
-              </Button>
-            </div>
+            
+            
           </div>
         
           {/* Content Grid/List */}
           <div className="mb-8">
             {/* Section tabs */}
-            <div className="flex items-center justify-center mb-6">
+
+
+            {/* Content header with view controls */}
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">
+                {activeSection === 'content' ? 'My Content' : 'My Projects'}
+              </h3>
               <div className="flex bg-black/40 rounded-xl p-1 backdrop-blur-sm border border-white/10">
                 <button
                   onClick={() => setActiveSection('content')}
@@ -564,13 +546,6 @@ export function ProfileTab() {
                   Projects ({userProjects.length})
                 </button>
               </div>
-            </div>
-
-            {/* Content header with view controls */}
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">
-                {activeSection === 'content' ? 'My Content' : 'My Projects'}
-              </h3>
               <div className="flex items-center gap-3">
                 {activeSection === 'content' && (
                   <div className="flex bg-black/40 rounded-lg p-1 backdrop-blur-sm border border-white/10">

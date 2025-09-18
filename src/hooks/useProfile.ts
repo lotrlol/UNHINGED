@@ -53,13 +53,49 @@ export function useProfile() {
     
     try {
       setLoading(true);
-      const { data: profile, error } = await supabase
+      // First try with the standard query
+      let { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      // If we get a 406 error, try with a simpler query
+      if (error && error.code === 'PGRST116') {
+        console.warn('Received PGRST116 error, trying with simpler query...');
+        const { data, error: simpleError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+          
+        if (simpleError) {
+          console.error('Error with simple profile query:', simpleError);
+          throw simpleError;
+        }
+        
+        if (!data) {
+          console.log('No profile found for user:', user.id);
+          return null;
+        }
+        
+        // If we got here, the profile exists but we had an issue with the full query
+        // Try to get the full profile with a raw query
+        const { data: fullProfile, error: fullError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id);
+          
+        if (fullError || !fullProfile?.[0]) {
+          console.error('Error fetching full profile:', fullError || 'No data returned');
+          throw fullError || new Error('Failed to load full profile data');
+        }
+        
+        profile = fullProfile[0];
+      } else if (error) {
+        throw error;
+      }
+      
       if (!profile) return null;
 
       // Generate fresh URLs for avatar and banner
@@ -101,14 +137,48 @@ export function useProfile() {
         
         console.log('Loading profile for user:', user.id);
         
-        const { data: profile, error } = await supabase
+        // First try with the standard query
+        let { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) {
-          console.error('Error loading profile:', error);
+        // If we get a 406 error, try with a simpler query
+        if (error && error.code === 'PGRST116') {
+          console.warn('Received PGRST116 error in loadProfile, trying with simpler query...');
+          const { data, error: simpleError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle();
+            
+          if (simpleError) {
+            console.error('Error with simple profile query in loadProfile:', simpleError);
+            throw simpleError;
+          }
+          
+          if (!data) {
+            console.log('No profile found for user in loadProfile:', user.id);
+            setProfile(null);
+            return;
+          }
+          
+          // If we got here, the profile exists but we had an issue with the full query
+          // Try to get the full profile with a raw query
+          const { data: fullProfile, error: fullError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id);
+            
+          if (fullError || !fullProfile?.[0]) {
+            console.error('Error fetching full profile in loadProfile:', fullError || 'No data returned');
+            throw fullError || new Error('Failed to load full profile data in loadProfile');
+          }
+          
+          profile = fullProfile[0];
+        } else if (error) {
+          console.error('Error loading profile in loadProfile:', error);
           throw error;
         }
         
@@ -193,17 +263,51 @@ export function useProfile() {
       }
 
       const now = new Date().toISOString();
+      
+      // Ensure all array fields are properly initialized
+      const arrayFields = ['roles', 'skills', 'looking_for', 'vibe_words'] as const;
+      const sanitizedData = arrayFields.reduce((acc, field) => ({
+        ...acc,
+        [field]: Array.isArray(profileData[field]) ? profileData[field] : []
+      }), {});
+
+      // Create a base profile object with all required fields
+      const baseProfile = {
+        username: '',
+        full_name: '',
+        roles: [] as string[],
+        skills: [] as string[],
+        looking_for: [] as string[],
+        vibe_words: [] as string[],
+        tagline: '',
+        bio: null as string | null,
+        location: null as string | null,
+        is_remote: false,
+        nsfw_preference: false,
+        avatar_url: null as string | null,
+        avatar_path: null as string | null,
+        banner_url: null as string | null,
+        banner_path: null as string | null,
+        cover_url: null as string | null,
+        is_verified: false,
+        phone_verified: false,
+        flagged: false,
+        onboarding_completed: true
+      };
+
+      // Merge the base profile with sanitized data and provided data
       const profileToCreate = {
+        ...baseProfile,
+        ...sanitizedData,
         ...profileData,
+        // Ensure these fields are always set
         id: user.id,
-        onboarding_completed: true,
         created_at: now,
         updated_at: now
       };
 
-      console.log('[createProfile] Creating profile with data:', profileToCreate);
+      console.log('[createProfile] Creating profile with data:', JSON.stringify(profileToCreate, null, 2));
       
-      // Use type assertion to bypass TypeScript's type checking for the insert operation
       const { data, error } = await insertIntoTable('profiles', profileToCreate);
 
       if (error) {
@@ -218,12 +322,13 @@ export function useProfile() {
 
       if (data) {
         console.log('[createProfile] Profile created successfully:', data);
-        setProfile(data);
-      } else {
-        console.warn('[createProfile] No data returned from profile creation');
+        // Refresh the profile data after creation
+        await fetchProfile();
+        return { data, error: null };
       }
 
-      return { data, error: null };
+      console.warn('[createProfile] No data returned from profile creation');
+      return { data: null, error: new Error('No data returned from profile creation') };
     } catch (error) {
       console.error('[createProfile] Unexpected error:', error);
       return { 
@@ -368,5 +473,6 @@ export function useProfile() {
     uploadFile,
     uploadAvatar,
     uploadBanner,
+    fetchProfile, // Expose fetchProfile so it can be called from components
   }
 }
