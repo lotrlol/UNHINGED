@@ -1,13 +1,25 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, MapPin, Calendar, MessageCircle, Check, Sparkles, Grid3X3, List, Play, Heart, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { UserPlus, UserMinus, Users } from 'lucide-react';
+import { UserPlus, UserMinus } from 'lucide-react';
 import { Button } from './ui/Button';
-import { Badge } from './ui/Badge';
-import { getInitials, formatDate } from '../lib/utils';
+import { getInitials } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useContent } from '../hooks/useContent';
 import { useFollows } from '../hooks/useFollows';
 import { SendFriendRequestModal } from './SendFriendRequestModal';
+
+import { Badge } from './ui/Badge';
+
+interface ContentItem {
+  id: string;
+  content_type: string;
+  title: string;
+  description?: string;
+  thumbnail_url?: string;
+  external_url?: string;
+  created_at: string;
+  like_count?: number;
+  view_count?: number;
+}
 
 interface UserProfileModalProps {
   isOpen: boolean
@@ -37,8 +49,9 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const [currentContentIndex, setCurrentContentIndex] = useState(0);
   const [showFriendRequestModal, setShowFriendRequestModal] = useState(false);
   
-  // Fetch user's content
-  const { content: userContent, loading: contentLoading } = useContent(user ? { creator_id: user.id } : undefined);
+  // User content state (temporarily empty until useContent is implemented)
+  const userContent: ContentItem[] = [];
+  const contentLoading = false;
   
   // Fetch follow data
   const { stats, actionLoading, toggleFollow } = useFollows(user?.id);
@@ -175,7 +188,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                 <div className="h-48 relative overflow-hidden">
                   {(user.cover_url || user.banner_url) ? (
                     <img
-                      src={user.cover_url || user.banner_url}
+                      src={user.cover_url || user.banner_url || ''}
                       alt="Cover"
                       className="w-full h-full object-cover"
                     />
@@ -384,7 +397,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                   </div>
                 ) : viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 gap-3 mb-6">
-                    {userContent.map((item, index) => (
+                    {userContent.map((item: ContentItem, index: number) => (
                       <div
                         key={item.id}
                         className="relative aspect-square bg-black/20 rounded-xl overflow-hidden cursor-pointer group"
@@ -416,7 +429,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                   </div>
                 ) : (
                   <div className="space-y-3 mb-6">
-                    {userContent.map((item, index) => (
+                    {userContent.map((item: ContentItem, index: number) => (
                       <div
                         key={item.id}
                         className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
@@ -430,7 +443,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                           <p className="text-sm text-gray-300 truncate">{item.description || 'No description'}</p>
                           <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
                             <span>{getContentIcon(item.content_type)} {item.content_type}</span>
-                            <span>{formatDate(item.created_at)}</span>
+                            <span>{new Date(item.created_at).toLocaleDateString()}</span>
                             <div className="flex items-center gap-3">
                               <span className="flex items-center gap-1">
                                 <Heart className="w-3 h-3" />

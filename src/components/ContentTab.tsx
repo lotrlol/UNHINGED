@@ -1,425 +1,516 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Share2, Plus, Heart, X } from 'lucide-react';
-import { ContentGlassCard } from './ui/GlassCard';
-import { formatDate, getInitials } from '../lib/utils';
-import { CreateContentModal } from './CreateContentModal';
-import { UserProfileModal } from './UserProfileModal';
-import { useContent, ContentPost as FetchedContentPost } from '../hooks/useContent';
-import { CommentSection } from './CommentSection';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  MessageSquare,
+  Check,
+  Loader2,
+  Heart,
+  HeartOff,
+  Search,
+  Filter,
+  Plus,
+  Eye,
+  Image as ImageIcon,
+  Video,
+  Music,
+  FileText,
+  Link as LinkIcon
+} from 'lucide-react';
+import { GlassCard } from './ui/GlassCard';
+import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
+import { getInitials } from '../lib/utils';
+import { useAuth } from '../hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../lib/supabase';
+import { useUserContent, type UserContent } from '../hooks/useUserContent';
+import { CreateContentModal } from './CreateContentModal';
 
-/* -------------------- VideoPlayer -------------------- */
-interface VideoPlayerProps {
-  src: string | null;
-  thumbnail: string | null;
-  title: string;
+interface ContentTabProps {
+  userId?: string;
+  onContentCreated?: () => void;
   className?: string;
 }
 
-const VideoPlayer = ({ src, thumbnail, title, className = '' }: VideoPlayerProps) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [showControls, setShowControls] = useState(true);
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-
-  const togglePlayPause = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) {
-      video.play().then(() => setIsPlaying(true));
-    } else {
-      video.pause();
-      setIsPlaying(false);
-    }
-    setShowControls(true);
-    setTimeout(() => setShowControls(false), 3000);
-  };
-
-  const toggleMute = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = !video.muted;
-    setIsMuted(video.muted);
-    setShowControls(true);
-    setTimeout(() => setShowControls(false), 3000);
-  };
-
-  const onTimeUpdate = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    setCurrentTime(video.currentTime);
-    setProgress((video.currentTime / video.duration) * 100);
-  };
-
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const video = videoRef.current;
-    if (!video) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pos = (e.clientX - rect.left) / rect.width;
-    video.currentTime = pos * video.duration;
-  };
-
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-  };
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleLoadedMetadata = () => setDuration(video.duration);
-    const handleEnded = () => setIsPlaying(false);
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            if (video.paused) {
-              video
-                .play()
-                .then(() => {
-                  setIsPlaying(true);
-                  video.muted = true;
-                  setIsMuted(true);
-                })
-                .catch(() => {});
-            }
-          } else {
-            if (!video.paused) {
-              video.pause();
-              setIsPlaying(false);
-            }
-          }
-        });
-      },
-      { threshold: 0.5 }
-    );
-
-    observer.observe(video);
-
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-    video.addEventListener('timeupdate', onTimeUpdate);
-    video.addEventListener('ended', handleEnded);
-
-    return () => {
-      observer.disconnect();
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      video.removeEventListener('timeupdate', onTimeUpdate);
-      video.removeEventListener('ended', handleEnded);
-    };
-  }, []);
-
-  return (
-    <div
-      className={`relative w-full overflow-hidden rounded-lg ${className}`}
-      onMouseMove={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
-    >
-      {src ? (
-        <video
-          ref={videoRef}
-          src={src}
-          className="w-full h-auto max-h-[80vh] object-contain cursor-pointer bg-transparent"
-          onClick={togglePlayPause}
-          loop
-          muted={isMuted}
-          playsInline
-          poster={thumbnail || undefined}
-          preload="metadata"
-          title={title}
-        />
-      ) : (
-        <div className="flex items-center justify-center h-full text-gray-500">
-          Video not available
-        </div>
-      )}
-
-      {!isPlaying && (
-        <div
-          className="absolute inset-0 flex items-center justify-center cursor-pointer"
-          onClick={togglePlayPause}
-        >
-          <div className="p-4 rounded-2xl bg-black/40 backdrop-blur-lg border border-white/10 shadow-lg">
-            <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </div>
-        </div>
-      )}
-
-      <div
-        className={`absolute bottom-0 left-0 right-0 px-4 pb-3 transition-all duration-300 ${
-          showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div className="bg-black/50 backdrop-blur-lg rounded-lg p-3 shadow-xl border border-white/10">
-          <div
-            className="w-full h-1.5 bg-gray-700/50 rounded-full mb-2 cursor-pointer overflow-hidden"
-            onClick={handleSeek}
-          >
-            <div
-              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full relative"
-              style={{ width: `${progress}%` }}
-            >
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full transform translate-x-1/2 shadow" />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <button onClick={togglePlayPause} className="p-2 hover:bg-white/10 rounded-full">
-                {isPlaying ? (
-                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M10 20h4V4h-4v16zm-6 0h4V4H4v16z" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                )}
-              </button>
-              <div className="text-xs font-medium text-white/90">
-                {formatTime(currentTime)} / {formatTime(duration)}
-              </div>
-            </div>
-
-            <button onClick={toggleMute} className="p-2 hover:bg-white/10 rounded-full">
-              {isMuted ? (
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 4L2.86 5.41 7 9.56v2.09c-.61-.21-1.25-.33-1.92-.33-2.76 0-5.08 2.24-5.08 5s2.32 5 5.08 5c1.34 0 2.57-.5 3.52-1.34l1.5 1.5C13.37 21.5 12 22 10.5 22 5.81 22 2 18.19 2 13.5c0-1.76.49-3.4 1.34-4.8L4.27 4zM10.5 17c-1.94 0-3.5-1.57-3.5-3.5v-.5l4.54 4.54c-.4.24-.85.46-1.34.46z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* -------------------- ContentTab -------------------- */
-const CONTENT_TYPES = {
-  video: { label: 'Video', emoji: '🎥' },
-  audio: { label: 'Audio', emoji: '🎧' },
-  image: { label: 'Image', emoji: '🖼️' },
-  article: { label: 'Article', emoji: '📝' },
-} as const;
-
-const ContentTab: React.FC = () => {
-  const [content, setContent] = useState<FetchedContentPost[]>([]);
-  const [loading, setLoading] = useState(true);
+const ContentTab = ({ userId, onContentCreated, className = '' }: ContentTabProps) => {
+  const { user } = useAuth();
+  const { content, loading, error, refresh, likeContent, unlikeContent } = useUserContent(userId || user?.id);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  // Initialize with null to keep comments collapsed by default
-  const [showComments, setShowComments] = useState<string | null>(null);
+  const [expandedContent, setExpandedContent] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    contentType: null as 'video' | 'audio' | 'image' | 'article' | null,
+    sortBy: 'newest' as 'newest' | 'most_viewed' | 'most_liked' | 'most_commented',
+  });
+  const [likedContents, setLikedContents] = useState<Set<string>>(new Set());
 
-  const {
-    content: fetchedContent,
-    loading: isLoading,
-    error,
-    likeContent,
-    refetch,
-  } = useContent();
+  const filteredContent = useMemo(() => {
+    return content.filter(item => {
+      // Filter by search query
+      const matchesSearch = !searchQuery || 
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Filter by content type
+      const matchesContentType = !filters.contentType || 
+        item.content_type === filters.contentType;
+      
+      return matchesSearch && matchesContentType;
+    });
+  }, [content, searchQuery, filters]);
 
-  useEffect(() => {
-    if (fetchedContent) setContent(fetchedContent);
-  }, [fetchedContent]);
+  const sortedContent = useMemo(() => {
+    const sorted = [...filteredContent];
+    switch (filters.sortBy) {
+      case 'most_viewed':
+        return sorted.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+      case 'most_liked':
+        return sorted.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+      case 'most_commented':
+        return sorted.sort((a, b) => (b.comment_count || 0) - (a.comment_count || 0));
+      case 'newest':
+      default:
+        return sorted.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+    }
+  }, [filteredContent, filters.sortBy]);
 
-  useEffect(() => {
-    setLoading(isLoading);
-  }, [isLoading]);
-
-  const handleLike = async (id: string) => {
-    const result = await likeContent(id);
-    if (!result?.error) {
-      setContent((prev) =>
-        prev.map((post) =>
-          post.id === id
-            ? {
-                ...post,
-                user_has_liked: !post.user_has_liked,
-                like_count: post.user_has_liked
-                  ? Math.max(post.like_count - 1, 0)
-                  : post.like_count + 1,
-              }
-            : post
-        )
-      );
+  const handleLike = async (contentId: string) => {
+    if (!user) return;
+    
+    const isLiked = likedContents.has(contentId);
+    
+    try {
+      if (isLiked) {
+        await unlikeContent(contentId);
+        setLikedContents(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(contentId);
+          return newSet;
+        });
+      } else {
+        await likeContent(contentId);
+        setLikedContents(prev => new Set(prev).add(contentId));
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
     }
   };
 
-  if (loading) {
+  const toggleExpand = (contentId: string) => {
+    setExpandedContent(prev => prev === contentId ? null : contentId);
+  };
+
+  if (loading && content.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500" />
+        <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
 
   if (error) {
-    return <div className="text-center py-8 text-red-500">Error loading content.</div>;
+    return (
+      <div className="p-4 text-center text-red-500">
+        Error loading content: {error}
+      </div>
+    );
   }
 
   return (
-    <div className="relative min-h-screen">
-      <div className="relative w-full max-w-4xl mx-auto px-4 py-8 space-y-8">
-        <h1 className="text-2xl font-bold text-white mb-6">Content Feed</h1>
+    <div className={`space-y-6 ${className}`}>
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center mb-6">
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search content..."
+            className="w-full pl-10 pr-4 py-2 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
         
-        {/* FAB */}
-        <div className="fixed bottom-8 right-8">
-          <div className="relative w-14 h-14">
-            {/* Button */}
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="absolute inset-0 w-full h-full rounded-full bg-gradient-to-br from-purple-600/90 to-pink-500/90 backdrop-blur-lg border border-white/10 shadow-2xl flex items-center justify-center text-white hover:scale-105 transform transition-all duration-200 z-10"
-              aria-label="Create new post"
+        <div className="flex gap-2 w-full md:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+          </Button>
+          {!userId || userId === user?.id ? (
+            <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Post
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      {showFilters && (
+        <GlassCard className="p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Sort By</label>
+              <select
+                className="w-full bg-white/5 border border-white/20 rounded-md p-2 text-sm"
+                value={filters.sortBy}
+                onChange={(e) => setFilters(prev => ({
+                  ...prev,
+                  sortBy: e.target.value as any
+                }))}
+              >
+                <option value="newest">Newest</option>
+                <option value="most_viewed">Most Viewed</option>
+                <option value="most_liked">Most Liked</option>
+                <option value="most_commented">Most Comments</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Content Type</label>
+              <select
+                className="w-full bg-white/5 border border-white/20 rounded-md p-2 text-sm"
+                value={filters.contentType || ''}
+                onChange={(e) => setFilters(prev => ({
+                  ...prev,
+                  contentType: e.target.value ? e.target.value as any : null
+                }))}
+              >
+                <option value="">All Types</option>
+                <option value="image">Images</option>
+                <option value="video">Videos</option>
+                <option value="audio">Audio</option>
+                <option value="article">Articles</option>
+              </select>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
+      <div className="space-y-4">
+        {sortedContent.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-400">
+              {searchQuery || filters.contentType 
+                ? 'No matching content found.' 
+                : 'No content found. Create the first post!'}
+            </p>
+            {(!userId || userId === user?.id) && !searchQuery && !filters.contentType && (
+              <Button 
+                onClick={() => setShowCreateModal(true)} 
+                className="mt-4"
+              >
+                Create Post
+              </Button>
+            )}
+          </div>
+        ) : (
+          <AnimatePresence>
+            {sortedContent.map((item) => (
+              <ContentCard
+                key={item.id}
+                content={item}
+                isExpanded={expandedContent === item.id}
+                isOwnContent={item.creator_id === user?.id}
+                isLiked={likedContents.has(item.id) || false}
+                onToggleExpand={() => toggleExpand(item.id)}
+                onLike={handleLike}
+                onComment={() => setExpandedContent(prev => prev === item.id ? null : item.id)}
+              />
+            ))}
+          </AnimatePresence>
+        )}
+      </div>
+
+      <CreateContentModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          refresh();
+          onContentCreated?.();
+        }}
+      />
+    </div>
+  );
+};
+
+// Content Card Component
+interface ContentCardProps {
+  content: UserContent;
+  isExpanded: boolean;
+  isOwnContent: boolean;
+  isLiked: boolean;
+  onToggleExpand: () => void;
+  onLike: (contentId: string) => void;
+  onComment: () => void;
+}
+
+const ContentCard = ({
+  content,
+  isExpanded,
+  isOwnContent,
+  isLiked,
+  onToggleExpand,
+  onLike,
+  onComment,
+}: ContentCardProps) => {
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+
+  const renderMedia = () => {
+    // First check if we have media_urls
+    if (!content.media_urls?.length) {
+      // If no media but we have an external URL, show a link
+      if (content.external_url) {
+        return (
+          <a 
+            href={content.external_url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="mt-3 flex items-center justify-center p-6 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <LinkIcon className="h-6 w-6 mr-2" />
+            <span>View External Content</span>
+          </a>
+        );
+      }
+      return null;
+    }
+
+    // Get the first media URL
+    const mediaUrl = content.media_urls[0];
+
+    // Show loading state
+    if (mediaLoading) {
+      return (
+        <div className="flex items-center justify-center h-48 bg-gray-800/50 rounded-lg">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      );
+    }
+
+    // Show error state
+    if (mediaError) {
+      return (
+        <div className="flex items-center justify-center h-48 bg-gray-800/50 rounded-lg text-red-400">
+          {mediaError}
+        </div>
+      );
+    }
+
+    // Render based on content type
+    switch (content.content_type) {
+      case 'image':
+        return (
+          <div className="mt-3 rounded-lg overflow-hidden">
+            <img 
+              src={mediaUrl} 
+              alt={content.title}
+              className="w-full max-h-[500px] object-contain rounded-lg bg-black"
+              onError={() => setMediaError('Failed to load image')}
+              onLoadStart={() => setMediaLoading(true)}
+              onLoad={() => setMediaLoading(false)}
+            />
+          </div>
+        );
+      
+      case 'video':
+        return (
+          <div className="mt-3 rounded-lg overflow-hidden">
+            <video 
+              src={mediaUrl} 
+              controls 
+              className="w-full max-h-[500px] object-contain rounded-lg bg-black"
+              onError={() => setMediaError('Failed to load video')}
+              onLoadStart={() => setMediaLoading(true)}
+              onLoadedData={() => setMediaLoading(false)}
             >
-              <Plus className="w-6 h-6" />
-            </button>
-            {/* Centered Pulse Animation */}
-            <span className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-600/30 to-pink-500/30 blur-xl animate-ping z-0" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        );
+      
+      case 'audio':
+        return (
+          <div className="mt-3 p-4 bg-gray-800/50 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <Music className="h-12 w-12 text-gray-400" />
+              <div className="flex-1">
+                <p className="font-medium">{content.title}</p>
+                <audio 
+                  src={mediaUrl} 
+                  controls 
+                  className="w-full mt-2"
+                  onError={() => setMediaError('Failed to load audio')}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      
+      default:
+        return (
+          <a 
+            href={mediaUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="mt-3 flex items-center justify-center p-6 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FileText className="h-12 w-12 mr-3 text-gray-400" />
+            <span>View {content.content_type || 'Content'}</span>
+          </a>
+        );
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2 }}
+    >
+      <GlassCard className="overflow-hidden">
+        <div className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              {content.creator_avatar ? (
+                <img 
+                  src={content.creator_avatar} 
+                  alt={content.creator_username || 'User'}
+                  className="h-10 w-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-500 font-medium">
+                  {getInitials(content.creator_username || 'U')}
+                </div>
+              )}
+              <div>
+                <h3 className="font-medium">{content.creator_username || 'Anonymous'}</h3>
+                <p className="text-xs text-gray-400">
+                  {formatDate(content.created_at)}
+                  {content.updated_at !== content.created_at && ' • Edited'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">
+                {content.content_type?.charAt(0).toUpperCase() + content.content_type?.slice(1) || 'Content'}
+              </Badge>
+            </div>
+          </div>
+          
+          <div className="mt-3">
+            <h3 className="text-lg font-semibold">{content.title}</h3>
+            {content.description && (
+              <>
+                <p className="mt-1 text-gray-300 whitespace-pre-line">
+                  {content.description.length > 200 && !isExpanded 
+                    ? `${content.description.substring(0, 200)}...` 
+                    : content.description}
+                </p>
+                
+                {content.description.length > 200 && (
+                  <button 
+                    className="mt-1 text-sm text-primary-400 hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleExpand();
+                    }}
+                  >
+                    {isExpanded ? 'Show less' : 'Read more'}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+          
+          {renderMedia()}
+          
+          <div className="mt-3 flex items-center justify-between text-sm text-gray-400">
+            <div className="flex items-center space-x-4">
+              <button 
+                className="flex items-center space-x-1 hover:text-white transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLike(content.id);
+                }}
+              >
+                {isLiked ? (
+                  <Heart className="h-4 w-4 text-red-500 fill-current" />
+                ) : (
+                  <Heart className="h-4 w-4" />
+                )}
+                <span>{content.like_count || 0}</span>
+              </button>
+              
+              <button 
+                className="flex items-center space-x-1 hover:text-white transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onComment();
+                }}
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>{content.comment_count || 0}</span>
+              </button>
+              
+              <div className="flex items-center space-x-1">
+                <Eye className="h-4 w-4" />
+                <span>{content.view_count || 0}</span>
+              </div>
+            </div>
+            
+            {content.external_url && (
+              <a 
+                href={content.external_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs text-gray-400 hover:text-white flex items-center"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <LinkIcon className="h-3 w-3 mr-1" />
+                Open
+              </a>
+            )}
           </div>
         </div>
-
-        <div className="w-full flex flex-col items-center space-y-6">
-          {content.map((item) => {
-            const hasLiked = item.user_has_liked ?? false;
-
-            return (
-              <ContentGlassCard
-                key={item.id}
-                className="overflow-hidden w-full max-w-2xl"
-              >
-                <div className="p-6 flex flex-col gap-4">
-                  {/* User Info */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-medium text-sm overflow-hidden">
-                      {item.creator_avatar ? (
-                        <img
-                          src={item.creator_avatar}
-                          alt={item.creator_name || 'User'}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        getInitials(item.creator_name || '?')
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-white truncate">{item.creator_name}</p>
-                      <div className="flex items-center text-xs text-gray-300 space-x-2">
-                        <span>{formatDate(item.created_at)}</span>
-                        <span className="text-white/50">•</span>
-                        <span className="inline-flex items-center">
-                          {CONTENT_TYPES[item.content_type].emoji}
-                          <span className="ml-1">{CONTENT_TYPES[item.content_type].label}</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-lg font-semibold text-white mt-1">
-                    {item.title}
-                  </h3>
-
-                  {/* Media */}
-                  <div className="relative overflow-hidden rounded-xl bg-black/20 backdrop-blur-sm">
-                    {item.content_type === 'video' ? (
-                      <VideoPlayer
-                        src={item.external_url}
-                        thumbnail={item.thumbnail_url}
-                        title={item.title}
-                        className="w-full"
-                      />
-                    ) : item.thumbnail_url ? (
-                      <img
-                        src={item.thumbnail_url}
-                        alt={item.title}
-                        className="w-full h-auto max-h-[70vh] object-contain mx-auto"
-                      />
-                    ) : null}
-                  </div>
-
-                  {/* Description */}
-                  {item.description && (
-                    <p className="text-gray-300 text-sm leading-relaxed">
-                      {item.description}
-                    </p>
-                  )}
-
-                  {/* Interaction Bar */}
-                  <div className="flex items-center justify-between mt-2 pt-3 border-t border-white/10">
-                    <div className="flex items-center space-x-4">
-                      <button
-                        onClick={() => handleLike(item.id)}
-                        className={`flex items-center space-x-1.5 hover:text-pink-400 transition-colors ${
-                          item.user_has_liked ? 'text-pink-500' : 'text-gray-400'
-                        }`}
-                      >
-                        <Heart 
-                          className={`w-5 h-5 ${item.user_has_liked ? 'fill-current' : ''}`} 
-                        />
-                        <span className="text-sm">{item.like_count || 0}</span>
-                      </button>
-                      <button 
-                        onClick={() => setShowComments(showComments === item.id ? null : item.id)}
-                        className="flex items-center space-x-1.5 text-gray-400 hover:text-blue-400 transition-colors"
-                      >
-                        <MessageSquare className="w-5 h-5" />
-                        <span className="text-sm">{item.comment_count || 0}</span>
-                      </button>
-                      <button className="text-gray-400 hover:text-green-400 transition-colors">
-                        <Share2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <span className="text-xs bg-white/10 text-white/80 px-2.5 py-1 rounded-full">
-                      {item.view_count} {item.view_count === 1 ? 'view' : 'views'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Always show comments if there are any, max 3 */}
-                {showComments === item.id && (
-                  <div className="px-6 pb-4">
-                    <div className="border-t border-white/10 pt-4">
-                      <CommentSection 
-                        contentId={item.id} 
-                        showPreview={false}
-                        isExpanded={true}
-                      />
-                    </div>
-                  </div>
-                )}
-              </ContentGlassCard>
-            );
-          })}
-        </div>
-
-        <CreateContentModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onContentCreated={() => {
-            refetch();
-            setShowCreateModal(false);
-          }}
-        />
-        <UserProfileModal
-          user={selectedUser}
-          isOpen={!!selectedUser}
-          onClose={() => setSelectedUser(null)}
-        />
-      </div>
-    </div>
+        
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="border-t border-white/10"
+            >
+              <div className="p-4">
+                <p className="text-sm text-gray-400">Comments coming soon</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </GlassCard>
+    </motion.div>
   );
 };
 

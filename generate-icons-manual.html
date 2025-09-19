@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Download App Icons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .icon-preview {
+            width: 144px;
+            height: 144px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 25%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 60px;
+            font-weight: bold;
+            margin: 20px auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .download-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+            display: block;
+            width: 200px;
+            text-align: center;
+            margin: 20px auto;
+        }
+        .download-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>App Icons Generator</h1>
+    
+    <div class="icon-preview">U</div>
+    
+    <div class="instructions">
+        <h3>How to get your app icons:</h3>
+        <ol>
+            <li>Right-click on the icon above and select "Save image as..."</li>
+            <li>Save it as "icon-144x144.png" in your project's <code>public/icons/</code> directory</li>
+            <li>Repeat for the following sizes (you can resize the image using an image editor):
+                <ul>
+                    <li>72x72 (save as icon-72x72.png)</li>
+                    <li>96x96 (save as icon-96x96.png)</li>
+                    <li>128x128 (save as icon-128x128.png)</li>
+                    <li>144x144 (save as icon-144x144.png)</li>
+                    <li>152x152 (save as icon-152x152.png)</li>
+                    <li>192x192 (save as icon-192x192.png)</li>
+                    <li>384x384 (save as icon-384x384.png)</li>
+                    <li>512x512 (save as icon-512x512.png)</li>
+                </ul>
+            </li>
+        </ol>
+        <p>Alternatively, you can use an online icon generator and upload the icon above.</p>
+    </div>
+    
+    <button class="download-btn" onclick="downloadIcon()">Download Icon (144x144)</button>
+    
+    <script>
+    function downloadIcon() {
+        const link = document.createElement('a');
+        link.download = 'icon-144x144.png';
+        link.href = 'data:image/svg+xml;base64,' + btoa(`
+            <svg width="144" height="144" viewBox="0 0 144 144" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <rect width="144" height="144" rx="36" fill="url(#gradient)"/>
+                <text x="50%" y="50%" font-family="Arial" font-size="60" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle">U</text>
+            </svg>
+        `);
+        link.click();
+    }
+    </script>
+</body>
+</html>

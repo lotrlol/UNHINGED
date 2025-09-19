@@ -1,5 +1,25 @@
 export interface Database {
   public: {
+    Functions: {
+      increment: {
+        Args: {
+          table_name: string;
+          column_name: string;
+          id_value: string;
+          amount?: number;
+        };
+        Returns: void;
+      };
+      decrement: {
+        Args: {
+          table_name: string;
+          column_name: string;
+          id_value: string;
+          amount?: number;
+        };
+        Returns: void;
+      };
+    };
     Tables: {
       profiles: {
         Row: {
