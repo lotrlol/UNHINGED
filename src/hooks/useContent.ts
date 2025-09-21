@@ -77,41 +77,72 @@ export function useContent(query?: ContentQuery) {
       setError(null);
       
       console.log('useContent - Fetching content with query:', query);
+      console.log('useContent - Query creator_id:', query?.creator_id);
       
-      // Use the query builder's object syntax for better column alias handling
+      // First, get the basic content posts with the creator filter if provided
       let queryBuilder = supabase
         .from('content_posts')
-        .select(`
-          *,
-          profiles:profiles!inner(
-            id,
-            username,
-            full_name,
-            avatar_url,
-            roles,
-            is_verified
-          )
-        `, { count: 'exact' })
+        .select('*')
         .order('created_at', { ascending: false });
 
+      // Apply creator filter if provided
       if (query?.creator_id) {
+        console.log('Filtering content by creator_id:', query.creator_id);
         queryBuilder = queryBuilder.eq('creator_id', query.creator_id);
+      } else {
+        console.log('No creator_id filter applied - showing all content');
       }
 
-      const { data, error } = await queryBuilder;
+      // Execute the initial query
+      const { data: contentData, error: contentError } = await queryBuilder;
 
-      console.log('useContent - Raw data from query:', data);
-      console.log('useContent - Query error:', error);
-
-      if (error) throw error;
-      if (!data) {
-        console.log('useContent - No data returned from query');
+      if (contentError) throw contentError;
+      if (!contentData || contentData.length === 0) {
+        console.log('No content found for the given query');
         setContent([]);
         return;
       }
 
-      // Transform the data to match the ContentPost interface
-      const processedContent: ContentPost[] = (data || []).map((item: any) => {
+      // Type assertion to fix TypeScript issues
+      const data = contentData as any[];
+      
+      console.log('useContent - Raw content data from database (before any filtering):', data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        creator_id: item.creator_id,
+        content_type: item.content_type
+      })));
+
+      // If a creator_id filter was applied, log the expected vs actual results
+      if (query?.creator_id) {
+        const filteredCount = data.filter((item: any) => item.creator_id === query.creator_id).length;
+        console.log(`useContent - Expected to filter for creator_id: ${query.creator_id}`);
+        console.log(`useContent - Actual content items matching filter: ${filteredCount}/${data.length}`);
+        if (filteredCount === 0) {
+          console.log('useContent - WARNING: No content matches the creator_id filter!');
+        }
+      }
+
+      // Get all unique creator IDs to fetch their profile data
+      const creatorIds = [...new Set(data.map((item: any) => item.creator_id))] as string[];
+      
+      // Fetch profiles for all creators in one go
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url, roles, is_verified')
+        .in('id', creatorIds);
+
+      if (profilesError) throw profilesError;
+
+      // Create a map of profile ID to profile data
+      const profilesMap = new Map(
+        (profilesData || []).map(profile => [profile.id, profile])
+      );
+
+      // Process the content with the fetched profiles
+      const processedContent = contentData.map(item => {
+
+      // Process the content with the fetched profiles
         // Process media_urls into the MediaContent format
         const media: MediaContent[] = Array.isArray(item.media_urls) 
           ? item.media_urls.map((url: string) => ({
@@ -121,13 +152,14 @@ export function useContent(query?: ContentQuery) {
             }))
           : [];
 
+        const profile = profilesMap.get(item.creator_id);
         const creator: User = {
           id: item.creator_id,
-          username: item.profiles?.username || 'unknown',
-          name: item.profiles?.full_name || 'Unknown User',
-          avatar: item.profiles?.avatar_url || null,
-          roles: Array.isArray(item.profiles?.roles) ? item.profiles.roles : [],
-          verified: Boolean(item.profiles?.is_verified)
+          username: profile?.username || 'unknown',
+          name: profile?.full_name || 'Unknown User',
+          avatar: profile?.avatar_url || null,
+          roles: Array.isArray(profile?.roles) ? profile.roles : [],
+          verified: Boolean(profile?.is_verified)
         };
 
         return {
@@ -212,15 +244,65 @@ export function useContent(query?: ContentQuery) {
     }
   };
 
-  const refetch = () => {
-    return fetchContent();
+  const createContent = async (contentData: {
+    title: string;
+    description?: string;
+    content_type: ContentType;
+    platform?: string;
+    external_url?: string;
+    thumbnail_url?: string;
+    tags: string[];
+  }) => {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) throw new Error(authError?.message || 'User not authenticated');
+
+      console.log('createContent - Creating content with data:', contentData);
+
+      const { data, error } = await supabase
+        .from('content_posts')
+        .insert([
+          {
+            creator_id: user.id,
+            title: contentData.title,
+            description: contentData.description || null,
+            content_type: contentData.content_type,
+            platform: contentData.platform || null,
+            external_url: contentData.external_url || null,
+            thumbnail_url: contentData.thumbnail_url || null,
+            tags: contentData.tags,
+            is_featured: false,
+            view_count: 0,
+            like_count: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+        ] as any)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('createContent - Database error:', error);
+        throw new Error(error.message || 'Failed to create content');
+      }
+
+      console.log('createContent - Successfully created content:', data);
+      return { data, error: null };
+    } catch (error) {
+      console.error('createContent - Error:', error);
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Failed to create content'
+      };
+    }
   };
 
   return { 
     content, 
     loading, 
     error, 
-    refetch,
-    likeContent 
+    refetch: fetchContent,
+    likeContent,
+    createContent 
   };
 }

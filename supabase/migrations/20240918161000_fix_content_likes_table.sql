@@ -12,8 +12,8 @@ BEGIN
       CONSTRAINT content_likes_pkey PRIMARY KEY (id),
       CONSTRAINT content_likes_content_id_fkey FOREIGN KEY (content_id) 
         REFERENCES public.content_posts (id) ON DELETE CASCADE,
-      CONSTRAINT content_likes_user_id_fkey FOREIGN KEY (user_id) 
-        REFERENCES auth.users (id) ON DELETE CASCADE,
+      CONSTRAINT content_likes_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.profiles (id) ON DELETE CASCADE,
       CONSTRAINT content_likes_content_id_user_id_key UNIQUE (content_id, user_id)
     );
     

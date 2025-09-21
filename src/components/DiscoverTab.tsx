@@ -1,16 +1,18 @@
-import React, { useState, useCallback } from 'react'
-import { Heart, X, MapPin, Users, Calendar, Loader2, Filter, ChevronDown } from 'lucide-react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
+import { X, MapPin, Users, Calendar, Loader2, Filter, History } from 'lucide-react'
 import { ImmersiveProfileCard } from './ImmersiveProfileCard'
-import { Badge } from './ui/Badge'
 import { Button } from './ui/Button'
 import { useUserDiscovery } from '../hooks/useUserDiscovery'
 import { DiscoveryFilters as DiscoveryFiltersComponent } from './DiscoveryFilters'
 import { formatDate, getInitials } from '../lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useContent, ContentItem } from '../hooks/useContent'
+import { useContent } from '../hooks/useContent'
 import { UserProfileModal } from './UserProfileModal.clean'
+import { UserInteractionsModal } from './UserInteractionsModal'
 
 export function DiscoverTab() {
+  console.log('🔍 DiscoverTab: Component mounted');
+
   const { users, allUsers, filters, loading, error, liking, likeUser, passUser, updateFilters } = useUserDiscovery()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null)
@@ -19,22 +21,79 @@ export function DiscoverTab() {
   const [startPos, setStartPos] = useState({ x: 0, y: 0 })
   const [showFilters, setShowFilters] = useState(false)
   const [showUserProfile, setShowUserProfile] = useState(false)
+  const [showInteractions, setShowInteractions] = useState(false)
+  const [isHovering, setIsHovering] = useState(false)
+  const autoSwipeTimer = useRef<NodeJS.Timeout | null>(null)
+
+  console.log('🔍 DiscoverTab: State initialized - users:', users.length, 'currentIndex:', currentIndex, 'loading:', loading, 'error:', error);
 
   const currentUser = users[currentIndex]
+
+  // Auto-swipe functionality
+  const startAutoSwipe = useCallback(() => {
+    // Clear any existing timer
+    if (autoSwipeTimer.current) {
+      clearTimeout(autoSwipeTimer.current)
+    }
+    
+    // Only set timer if not hovering and there are users left
+    if (!isHovering && currentIndex < users.length - 1) {
+      autoSwipeTimer.current = setTimeout(() => {
+        handlePass()
+      }, 10000) // 10 seconds
+    }
+  }, [currentIndex, users.length, isHovering])
+
+  // Reset timer on user interaction
+  const resetAutoSwipe = useCallback(() => {
+    if (autoSwipeTimer.current) {
+      clearTimeout(autoSwipeTimer.current)
+    }
+    startAutoSwipe()
+  }, [startAutoSwipe])
+
+  // Start auto-swipe when component mounts or currentIndex changes
+  useEffect(() => {
+    startAutoSwipe()
+    return () => {
+      if (autoSwipeTimer.current) {
+        clearTimeout(autoSwipeTimer.current)
+      }
+    }
+  }, [startAutoSwipe])
+  
+  // Reset timer on any user interaction
+  useEffect(() => {
+    const handleInteraction = () => {
+      resetAutoSwipe()
+    }
+    
+    window.addEventListener('mousedown', handleInteraction)
+    window.addEventListener('touchstart', handleInteraction)
+    window.addEventListener('keydown', handleInteraction)
+    
+    return () => {
+      window.removeEventListener('mousedown', handleInteraction)
+      window.removeEventListener('touchstart', handleInteraction)
+      window.removeEventListener('keydown', handleInteraction)
+    }
+  }, [resetAutoSwipe])
   
   // Fetch content for the current user
   const { content: userContent = [] } = useContent(currentUser ? { creator_id: currentUser.id } : undefined)
-  
+
+  console.log('🔍 DiscoverTab: Content loaded for user', currentUser?.username, '- content items:', userContent.length);
+
   // Format content for ImmersiveProfileCard
   const formatContent = useCallback((content: any[]) => {
     return content.map(item => ({
       id: item.id,
-      type: item.content_type === 'video' ? 'video' : 'image',
+      type: (item.content_type === 'video' ? 'video' : 'image') as 'video' | 'image',
       url: item.external_url || item.media_url || '',
       thumbnail: item.thumbnail_url
     }));
   }, []);
-  
+
   // Format user data for ImmersiveProfileCard
   const formatUser = useCallback((user: any) => ({
     id: user.id,
@@ -48,35 +107,72 @@ export function DiscoverTab() {
     content: formatContent(userContent)
   }), [userContent, formatContent]);
 
+  console.log('🔍 DiscoverTab: Current user data:', currentUser ? '✅ User loaded' : '❌ No user', 'currentIndex:', currentIndex, 'total users:', users.length);
+
+  // Reset current index when filters change (users get re-fetched)
   React.useEffect(() => {
     setCurrentIndex(0)
+    console.log('🔄 DiscoverTab: Filters changed, resetting currentIndex to 0. New filters:', filters)
   }, [filters])
 
+
   const handleLike = async () => {
-    if (!currentUser || liking) return
-    setSwipeDirection('right')
-    setTimeout(async () => {
-      const { error } = await likeUser(currentUser.id)
+    if (!currentUser || liking) return;
+    
+    // Show the swipe animation
+    setSwipeDirection('right');
+    
+    try {
+      // Call the likeUser function and wait for it to complete
+      const { error, match } = await likeUser(currentUser.id);
+      
       if (error) {
-        console.error('Error liking user:', error)
-        alert('Failed to like user: ' + error)
+        console.error('Error liking user:', error);
+        // Show a more user-friendly error message
+        alert('Failed to like user. Please try again.');
+        return;
       }
-      setCurrentIndex(prev => prev + 1)
-      setSwipeDirection(null)
-    }, 300)
+      
+      // If it's a match, show a special message
+      if (match) {
+        console.log('🎉 It\'s a match!');
+        // You could show a match modal here if desired
+      }
+      
+      // Move to the next user
+      setCurrentIndex(prev => prev + 1);
+    } catch (err) {
+      console.error('Unexpected error in handleLike:', err);
+    } finally {
+      // Reset the swipe direction after the animation completes
+      setTimeout(() => {
+        setSwipeDirection(null);
+      }, 300);
+    }
   }
 
   const handlePass = async () => {
-    if (!currentUser) return
-    setSwipeDirection('left')
+    if (!currentUser) return;
+    setSwipeDirection('left');
     setTimeout(async () => {
-      const { error } = await passUser(currentUser.id)
-      if (error) {
-        console.error('Error passing user:', error)
+      try {
+        const response = await passUser(currentUser.id);
+
+        // Check if response has an error property (Supabase style)
+        if (response?.error) {
+          console.error('Error passing user:', response.error);
+        }
+
+        // Move to next user in all cases
+        setCurrentIndex(prev => prev + 1);
+      } catch (error) {
+        // This should only catch unexpected errors, not Supabase errors
+        console.error('Unexpected error in handlePass:', error);
+        setCurrentIndex(prev => prev + 1);
+      } finally {
+        setSwipeDirection(null);
       }
-      setCurrentIndex(prev => prev + 1)
-      setSwipeDirection(null)
-    }, 300)
+    }, 300);
   }
 
   const handleStart = (clientX: number, clientY: number) => {
@@ -183,19 +279,39 @@ export function DiscoverTab() {
         <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900 flex items-center justify-center p-4">
           {/* Enhanced Header for No Users State */}
           <div className="fixed top-0 left-0 right-0 z-[60] p-4">
-            <div className="flex justify-end max-w-6xl mx-auto">
-              <button
-                onClick={() => setShowFilters(true)}
-                className="relative px-4 py-2 rounded-full bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md border border-purple-400/30 text-white hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg flex items-center gap-2 font-medium mr-16"
-              >
-                <Filter className="w-4 h-4" />
-                Filters
-                {Object.keys(filters).length > 0 && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-md">
-                    <span className="text-xs text-white font-bold">{Object.keys(filters).length}</span>
-                  </div>
-                )}
-              </button>
+            <div className="flex justify-between items-center max-w-6xl mx-auto">
+              {/* Spacer */}
+              <div />
+
+              {/* Buttons Container */}
+              <div className="flex items-center gap-3">
+                {/* Interactions History Button */}
+                <button
+                  onClick={() => {
+                    console.log('🔘 History button clicked, setting showInteractions to true')
+                    setShowInteractions(true)
+                  }}
+                  className="relative px-4 py-2 rounded-full bg-gradient-to-r from-blue-600/80 to-indigo-600/80 backdrop-blur-md border border-blue-400/30 text-white hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg flex items-center gap-2 font-medium"
+                  aria-label="Discovery History"
+                >
+                  <History className="w-4 h-4" />
+                  History
+                </button>
+
+                {/* Filters Button */}
+                <button
+                  onClick={() => setShowFilters(true)}
+                  className="relative px-4 py-2 rounded-full bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md border border-purple-400/30 text-white hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg flex items-center gap-2 font-medium"
+                >
+                  <Filter className="w-4 h-4" />
+                  Filters
+                  {Object.keys(filters).length > 0 && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-md">
+                      <span className="text-xs text-white font-bold">{Object.keys(filters).length}</span>
+                    </div>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -273,6 +389,7 @@ export function DiscoverTab() {
             />
           )}
         </AnimatePresence>
+
       </>
     )
   }
@@ -281,7 +398,11 @@ export function DiscoverTab() {
   const passOpacity = swipeDirection === 'left' ? 1 : isDragging && dragOffset.x < -50 ? Math.min(Math.abs(dragOffset.x) / 100, 1) : 0
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900 overflow-hidden">
+    <div 
+      className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900 overflow-hidden"
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
       {/* Animated gradient blobs */}
       <motion.div
         className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-600 rounded-full blur-3xl opacity-25"
@@ -301,23 +422,21 @@ export function DiscoverTab() {
           <div className="px-4 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white text-sm">
             {currentIndex + 1} of {users.length}
           </div>
-          
+
           {/* Spacer to avoid HeaderNotifications overlap */}
           <div className="flex-1" />
-          
-          {/* Filter Button - Positioned to avoid HeaderNotifications */}
+
+          {/* Interactions History Button */}
           <button
-            onClick={() => setShowFilters(true)}
-            className="relative px-4 py-2 rounded-full bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md border border-purple-400/30 text-white hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg flex items-center gap-2 font-medium mr-16"
-            aria-label="Filters"
+            onClick={() => {
+              console.log('🔘 History button clicked, setting showInteractions to true')
+              setShowInteractions(true)
+            }}
+            className="relative px-4 py-2 rounded-full bg-gradient-to-r from-blue-600/80 to-indigo-600/80 backdrop-blur-md border border-blue-400/30 text-white hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg flex items-center gap-2 font-medium"
+            aria-label="Discovery History"
           >
-            <Filter className="w-4 h-4" />
-            Filters
-            {Object.keys(filters).length > 0 && (
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-md">
-                <span className="text-xs text-white font-bold">{Object.keys(filters).length}</span>
-              </div>
-            )}
+            <History className="w-4 h-4" />
+            History
           </button>
         </div>
       </div>
@@ -333,7 +452,16 @@ export function DiscoverTab() {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          onMouseDown={handleMouseDown}
+          onMouseDown={(e) => {
+            handleMouseDown(e)
+            resetAutoSwipe()
+          }}
+          onTouchStart={(e) => {
+            handleTouchStart(e)
+            resetAutoSwipe()
+          }}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           {/* Like/Pass indicators */}
           <div className="absolute top-8 left-8 z-20 pointer-events-none" style={{ opacity: likeOpacity }}>
@@ -348,176 +476,29 @@ export function DiscoverTab() {
           </div>
 
           {/* User Card */}
-          <div 
+          <div
             className={`w-full h-full rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900/90 to-gray-900/70 backdrop-blur-xl border border-white/10 shadow-2xl cursor-grab active:cursor-grabbing select-none ${swipeDirection ? 'opacity-0' : ''}`}
           >
-            {/* Content Slider Background */}
-            <div className="relative w-full h-full">
-              {userContent && userContent.length > 0 ? (
-                <div className="w-full h-full">
-                  {/* Content slides */}
-                  <div className="relative w-full h-full overflow-hidden">
-                    {userContent.slice(0, 3).map((content: ContentItem, index: number) => (
-                      <div
-                        key={content.id}
-                        className="absolute inset-0 w-full h-full"
-                        style={{
-                          transform: `translateX(${index * 100}%)`,
-                          transition: 'transform 0.5s ease-in-out'
-                        }}
-                      >
-                        {content.content_type === 'video' && (content.media_url || content.external_url) ? (
-                          <video
-                            src={(content.media_url || content.external_url) ?? ''}
-                            className="w-full h-full object-cover"
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                            controls={false}
-                          />
-                        ) : (content.thumbnail_url || content.media_url) ? (
-                          <img
-                            src={(content.thumbnail_url || content.media_url) ?? ''}
-                            alt={content.title || 'Content image'}
-                            className="w-full h-full object-cover"
-                            draggable={false}
-                            onError={(e) => {
-                              // Fallback to placeholder if image fails to load
-                              const target = e.target as HTMLImageElement;
-                              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(content.title || 'U')}&background=random`;
-                              target.className = 'w-full h-full object-cover bg-gray-800';
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-purple-600/60 to-pink-600/60 flex items-center justify-center">
-                            <span className="text-8xl text-white/20">
-                              {content.content_type === 'image' ? '📸' : 
-                               content.content_type === 'audio' ? '🎵' : '📝'}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Content indicators */}
-                  {userContent.length > 1 && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1">
-                      {userContent.slice(0, 3).map((_, index) => (
-                        <div
-                          key={index}
-                          className="w-8 h-1 bg-white/30 rounded-full overflow-hidden"
-                        >
-                          <div className="w-full h-full bg-white rounded-full" />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Fallback when no content */
-                <div className="w-full h-full bg-gradient-to-br from-purple-600/60 to-pink-600/60 flex items-center justify-center">
-                  <span className="text-8xl text-white/20 font-bold">
-                    {currentUser.full_name.charAt(0)}
-                  </span>
-                </div>
-              )}
-              
-              {/* Dark gradient overlay for text readability */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
-              
-              {/* Verification badge */}
-              {currentUser.is_verified && (
-                <div className="absolute top-4 right-4 z-10">
-                  <Badge className="bg-green-600/90 text-white border border-green-400 backdrop-blur-sm">
-                    ✓ Verified
-                  </Badge>
-                </div>
-              )}
-
-              {/* User Info Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
-                {/* Name and username */}
-                <div className="mb-4">
-                  <h3 className="text-3xl font-bold text-white drop-shadow-lg">{currentUser.full_name}</h3>
-                  <p className="text-gray-200 text-lg drop-shadow-md">@{currentUser.username}</p>
-                  {currentUser.tagline && (
-                    <p className="text-gray-300 italic mt-2 drop-shadow-md">"{currentUser.tagline}"</p>
-                  )}
-                </div>
-
-                {/* Quick info chips */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {/* Top role */}
-                  {currentUser.roles.length > 0 && (
-                    <Badge className="bg-black/50 text-white border border-white/20 backdrop-blur-sm">
-                      {currentUser.roles[0]}
-                    </Badge>
-                  )}
-                  
-                  {/* Location */}
-                  {currentUser.location && (
-                    <Badge className="bg-black/50 text-white border border-white/20 backdrop-blur-sm">
-                      📍 {currentUser.location}
-                    </Badge>
-                  )}
-                  
-                  {/* Remote */}
-                  {currentUser.is_remote && (
-                    <Badge className="bg-black/50 text-white border border-white/20 backdrop-blur-sm">
-                      🌍 Remote
-                    </Badge>
-                  )}
-                  
-                  {/* Content count */}
-                  {userContent && userContent.length > 0 && (
-                    <Badge className="bg-black/50 text-white border border-white/20 backdrop-blur-sm">
-                      {userContent.length} {userContent.length === 1 ? 'post' : 'posts'}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Profile Button */}
-                <div className="flex justify-center mb-4">
-                  <motion.button
-                    onClick={() => setShowUserProfile(true)}
-                    className="px-6 py-2 bg-white/10 backdrop-blur-md text-white rounded-full border border-white/20 hover:bg-white/20 transition-colors"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Show Full Profile
-                  </motion.button>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-4 justify-center">
-                  <motion.button
-                    onClick={handlePass}
-                    disabled={liking || swipeDirection !== null}
-                    className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500/90 to-red-600/90 backdrop-blur-md border border-red-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <X className="w-6 h-6" />
-                  </motion.button>
-                  
-                  <motion.button
-                    onClick={handleLike}
-                    disabled={liking || swipeDirection !== null}
-                    className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500/90 to-purple-600/90 backdrop-blur-md border border-pink-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    {liking ? (
-                      <Loader2 className="w-7 h-7 animate-spin" />
-                    ) : (
-                      <Heart className="w-7 h-7" />
-                    )}
-                  </motion.button>
-                </div>
+            {/* ImmersiveProfileCard Component */}
+            {currentUser && formatUser ? (
+              <ImmersiveProfileCard
+                user={formatUser(currentUser)}
+                onLike={handleLike}
+                onPass={handlePass}
+                onProfileOpen={() => setShowUserProfile(true)}
+                isDragging={isDragging}
+                dragOffset={dragOffset}
+                swipeDirection={swipeDirection}
+                liking={liking}
+              />
+            ) : (
+              /* Fallback when no user or formatting issue */
+              <div className="w-full h-full bg-gradient-to-br from-purple-600/60 to-pink-600/60 flex items-center justify-center">
+                <span className="text-8xl text-white/20 font-bold">
+                  {currentUser?.full_name?.charAt(0) || '?'}
+                </span>
               </div>
-            </div>
+            )}
           </div>
         </motion.div>
       </div>
@@ -527,7 +508,7 @@ export function DiscoverTab() {
         Swipe or use buttons • ← Pass • Like →
       </div>
 
-      {/* Combined AnimatePresence for all animations */}
+      {/* Combined AnimatePresence for all modals */}
       <AnimatePresence>
         {/* User Profile Modal */}
         {showUserProfile && currentUser && (
@@ -538,6 +519,13 @@ export function DiscoverTab() {
             user={currentUser}
           />
         )}
+        
+        {/* User Interactions Modal */}
+        <UserInteractionsModal
+          key="interactions-modal"
+          isOpen={showInteractions}
+          onClose={() => setShowInteractions(false)}
+        />
 
         {/* Filters Slide-out */}
         {showFilters && (
@@ -579,34 +567,6 @@ export function DiscoverTab() {
                 />
               </div>
             </motion.div>
-            {/* Action Buttons */}
-            <div className="flex gap-4 justify-center">
-              <motion.button
-                key="pass-button"
-                onClick={handlePass}
-                disabled={liking || swipeDirection !== null}
-                className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500/90 to-red-600/90 backdrop-blur-md border border-red-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <X className="w-6 h-6" />
-              </motion.button>
-              
-              <motion.button
-                key="like-button"
-                onClick={handleLike}
-                disabled={liking || swipeDirection !== null}
-                className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500/90 to-purple-600/90 backdrop-blur-md border border-pink-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {liking ? (
-                  <Loader2 className="w-7 h-7 animate-spin" />
-                ) : (
-                  <Heart className="w-7 h-7" />
-                )}
-              </motion.button>
-            </div>
           </>
         )}
       </AnimatePresence>

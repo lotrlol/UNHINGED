@@ -111,7 +111,7 @@ export function SendFriendRequestModal({
                   )}
                 </div>
                 <p className="text-gray-300 text-sm">@{user.username}</p>
-                {user.roles.length > 0 && (
+                {user.roles && user.roles.length > 0 && (
                   <p className="text-purple-300 text-xs mt-1">
                     {user.roles.slice(0, 2).join(', ')}
                     {user.roles.length > 2 && ` +${user.roles.length - 2}`}

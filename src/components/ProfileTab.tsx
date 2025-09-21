@@ -12,11 +12,12 @@ import { useProfile } from '../hooks/useProfile';
 import { useAuth } from '../hooks/useAuth';
 import { useFollows } from '../hooks/useFollows';
 import { toast } from 'sonner';
-import { useContent, ContentItem } from '../hooks/useContent';
+import { useContent, type ContentPost } from '../hooks/useContent';
 import { ProfileCard } from './ProfileCard';
 import { supabase } from '../lib/supabase';
 import { useProjects } from '../hooks/useProjects';
 import { EditProfileModal } from './EditProfileModal';
+import { CreateContentModal } from './CreateContentModal';
 
 const VideoPlayer: React.FC<{
   src: string | null;
@@ -93,7 +94,7 @@ export function ProfileTab() {
   const { user } = useAuth();
   const [contentViewMode, setContentViewMode] = useState<ViewMode>('grid');
   const [activeSection, setActiveSection] = useState<'content' | 'projects'>('content');
-  const [, setShowCreateModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const [lightboxContent, setLightboxContent] = useState<LightboxContent | null>(null);
@@ -117,16 +118,46 @@ export function ProfileTab() {
   }, [profile]);
 
   // Fetch user's content
+  console.log('ProfileTab - User ID for content query:', user?.id);
+  console.log('ProfileTab - Query object being passed to useContent:', user?.id ? { creator_id: user.id } : undefined);
   const {
     content: userContent,
     loading: contentLoading,
     error: contentError,
-  } = useContent({ creator_id: user?.id });
+  } = useContent(user?.id ? { creator_id: user.id } : undefined);
+  
+  // Debug log to check the fetched content
+  useEffect(() => {
+    if (user?.id && userContent) {
+      console.log('Fetched content for user ID:', user.id);
+      console.log('Content count:', userContent.length);
+      console.log('Content items:', userContent.map(item => ({
+        id: item.id,
+        title: item.title,
+        creator_id: item.creator.id,
+        content_type: item.content_type,
+        external_url: item.external_url
+      })));
+    }
+  }, [user?.id, userContent]);
 
-  // Filter only media content for the lightbox
-  const mediaContent = (userContent || []).filter((item: ContentItem): item is ContentItem & { content_type: 'video' | 'image' } =>
-    (item.content_type === 'video' || item.content_type === 'image') && !!item.external_url
+  // Filter only media content for the lightbox from the current user
+  const mediaContent = (userContent || []).filter((item: ContentPost): item is ContentPost & { content_type: 'video' | 'image' } =>
+    (item.content_type === 'video' || item.content_type === 'image') && 
+    !!item.external_url && 
+    item.creator.id === user?.id
   );
+  
+  // Debug log to verify filtered media content
+  useEffect(() => {
+    console.log('Filtered media content:', mediaContent.map(item => ({
+      id: item.id,
+      title: item.title,
+      creator_id: item.creator.id,
+      type: item.content_type,
+      url: item.external_url
+    })));
+  }, [mediaContent]);
 
   // Log content when it changes
   useEffect(() => {
@@ -445,10 +476,10 @@ export function ProfileTab() {
       </div>
     );
   }
-
   return (
+
     <div className="profile-tab-container">
-      <div className="relative p-4 pb-24">
+      <div className="relative min-h-screen">
         {/* Background blobs */}
         <motion.div
           className="absolute -top-16 -left-16 w-80 h-80 bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-600 rounded-full blur-3xl opacity-30"
@@ -461,11 +492,11 @@ export function ProfileTab() {
           transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
         />
       
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          transition={{ duration: 0.6 }} 
-          className="relative mb-8"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="relative"
         >
           <ProfileCard
             username={profileState?.username || ''}
@@ -483,6 +514,7 @@ export function ProfileTab() {
             onBannerChange={handleBannerChange}
             onAvatarChange={handleAvatarChange}
             className="w-full"
+            fullScreen={true}
           />
         </motion.div>
 
@@ -491,77 +523,70 @@ export function ProfileTab() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="relative z-10"
+          className="relative z-10 mx-4"
         >
-          {/* Content header with view controls */}
-          <div className="flex items-center justify-between mb-6">
-            
-            
-          </div>
-        
-          {/* Content Grid/List */}
-          <div className="mb-8">
-            {/* Section tabs */}
-
-
-            {/* Content header with view controls */}
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">
-                {activeSection === 'content' ? 'My Content' : 'My Projects'}
-              </h3>
-              <div className="flex bg-black/40 rounded-xl p-1 backdrop-blur-sm border border-white/10">
-                <button
-                  onClick={() => setActiveSection('content')}
-                  className={`px-6 py-2 rounded-lg transition-all text-sm font-medium ${
-                    activeSection === 'content' 
-                      ? 'bg-purple-600/50 text-white shadow-lg' 
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  Content ({userContent.length})
-                </button>
-                <button
-                  onClick={() => setActiveSection('projects')}
-                  className={`px-6 py-2 rounded-lg transition-all text-sm font-medium ${
-                    activeSection === 'projects' 
-                      ? 'bg-purple-600/50 text-white shadow-lg' 
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  Projects ({userProjects.length})
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
-                {activeSection === 'content' && (
-                  <div className="flex bg-black/40 rounded-lg p-1 backdrop-blur-sm border border-white/10">
-                    <button
-                      onClick={() => setContentViewMode('grid')}
-                      className={`p-2 rounded-md transition-all ${
-                        contentViewMode === 'grid' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      <Grid3X3 size={18} />
-                    </button>
-                    <button
-                      onClick={() => setContentViewMode('list')}
-                      className={`p-2 rounded-md transition-all ${
-                        contentViewMode === 'list' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      <List size={18} />
-                    </button>
-                  </div>
-                )}
-                <Button
-                  onClick={handleCreate}
-                  variant="primary"
-                  className="bg-gradient-to-r from-purple-600 to-pink-600"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  {activeSection === 'content' ? 'Create' : 'New Project'}
-                </Button>
-              </div>
+          {/* Section tabs - positioned above heading */}
+          <div className="flex justify-left mb-4">
+            <div className="flex bg-black/20 rounded-lg p-0.5 backdrop-blur-sm border border-white/5">
+              <button
+                onClick={() => setActiveSection('content')}
+                className={`px-4 py-1.5 rounded-md transition-all text-xs font-medium ${
+                  activeSection === 'content'
+                    ? 'bg-purple-600/30 text-white shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Content ({userContent.length})
+              </button>
+              <button
+                onClick={() => setActiveSection('projects')}
+                className={`px-4 py-1.5 rounded-md transition-all text-xs font-medium ${
+                  activeSection === 'projects'
+                    ? 'bg-purple-600/30 text-white shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Projects ({userProjects.length})
+              </button>
             </div>
+          </div>
+
+          {/* Content header */}
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-white">
+              {activeSection === 'content' ? 'My Content' : 'My Projects'}
+            </h3>
+            <div className="flex items-center gap-3">
+              {activeSection === 'content' && (
+                <div className="flex bg-black/40 rounded-lg p-1 backdrop-blur-sm border border-white/10">
+                  <button
+                    onClick={() => setContentViewMode('grid')}
+                    className={`p-2 rounded-md transition-all ${
+                      contentViewMode === 'grid' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Grid3X3 size={18} />
+                  </button>
+                  <button
+                    onClick={() => setContentViewMode('list')}
+                    className={`p-2 rounded-md transition-all ${
+                      contentViewMode === 'list' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <List size={18} />
+                  </button>
+                </div>
+              )}
+              <Button
+                onClick={handleCreate}
+                variant="primary"
+                className="bg-gradient-to-r from-purple-600 to-pink-600"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {activeSection === 'content' ? 'Create' : 'New Project'}
+              </Button>
+            </div>
+          </div>
 
             {(activeSection === 'content' ? contentLoading : projectsLoading) ? (
               <div className="flex items-center justify-center py-12">
@@ -751,7 +776,8 @@ export function ProfileTab() {
                 </div>
               )
             )}
-          </div>
+          
+         
           
           {/* Logout Button */}
           <div className="mt-8 mb-12 flex justify-center">
@@ -767,6 +793,21 @@ export function ProfileTab() {
             </motion.button>
           </div>
         </motion.div>
+        
+        {/* Create Content/Project Modal */}
+        <CreateContentModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onContentCreated={() => {
+            // Refresh content or projects after creation
+            if (activeSection === 'content') {
+              // Content will be refreshed by the useContent hook
+            } else {
+              // Refresh projects if needed
+            }
+          }}
+        />
+        
         {/* Edit Profile Modal */}
         <EditProfileModal
           isOpen={showEditModal}
@@ -861,7 +902,8 @@ export function ProfileTab() {
         
       </div>
     </div>
-  );
+    );
+  
 }
 
 // Helper function to format dates

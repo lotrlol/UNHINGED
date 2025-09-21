@@ -44,6 +44,7 @@ export interface ProfileCardProps {
   onBannerChange?: (file: File) => void;
   onAvatarChange?: (file: File) => void;
   className?: string;
+  fullScreen?: boolean;
 }
 
 export function ProfileCard({
@@ -59,6 +60,7 @@ export function ProfileCard({
   onBannerChange,
   onAvatarChange,
   className = '',
+  fullScreen = false,
 }: ProfileCardProps) {
   const [isUploading, setIsUploading] = useState<'avatar' | 'banner' | null>(null);
   const [previewBanner, setPreviewBanner] = useState<string | null>(null);
@@ -268,7 +270,7 @@ export function ProfileCard({
       </div>
 
       {/* Profile Info */}
-      <div className="px-6 pb-6 -mt-16 relative z-10">
+      <div className={cn('pb-6 -mt-16 relative z-10', fullScreen ? '' : 'px-6')}>
         <div className="flex justify-between items-start">
           {/* Avatar */}
           <div className="relative group">
@@ -311,7 +313,7 @@ export function ProfileCard({
           </div>
 
           {/* Edit Profile Button */}
-          <div className="flex gap-2 mt-4">
+          <div className={cn('flex gap-2 mt-4', fullScreen ? 'mr-6' : '')}>
             {onEditProfile && (
               <Button 
                 variant="outline" 
@@ -327,7 +329,7 @@ export function ProfileCard({
         </div>
 
         {/* User Info */}
-        <div className="mt-4">
+        <div className={cn('mt-4', fullScreen ? 'px-6' : '')}>
           <h1 className="text-2xl font-bold text-white">{fullName || username}</h1>
           <p className="text-gray-300">@{username}</p>
           
@@ -349,7 +351,7 @@ export function ProfileCard({
           </div>
 
           {/* Stats */}
-          <div className="flex items-center space-x-6 mt-4 pt-4 border-t border-white/10">
+          <div className={cn('flex items-center space-x-6 mt-4 pt-4 border-t border-white/10', fullScreen ? '' : 'px-6')}>
             <div className="text-center">
               <div className="text-white font-semibold">{stats.posts.toLocaleString()}</div>
               <div className="text-xs text-gray-400">Posts</div>

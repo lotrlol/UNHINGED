@@ -1,23 +1,34 @@
 import { useState, useEffect } from 'react';
-import { X, MessageCircle, Grid3X3, List, Play, Heart, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { UserPlus } from 'lucide-react';
+import { X, MessageCircle, Grid3X3, List, Play, Heart, Eye, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { Button } from './ui/Button';
 import { getInitials } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFollows } from '../hooks/useFollows';
+import { useAuth } from '../hooks/useAuth';
+import { useUserContent } from '../hooks/useUserContent';
 import { SendFriendRequestModal } from './SendFriendRequestModal';
 import { Badge } from './ui/Badge';
 
 interface ContentItem {
   id: string;
-  content_type: string;
+  creator_id: string;
   title: string;
-  description?: string;
-  thumbnail_url?: string;
-  external_url?: string;
+  description: string | null;
+  content_type: 'video' | 'audio' | 'image' | 'article';
+  media_urls: string[];
+  thumbnail_url: string | null;
+  external_url: string | null;
+  tags: string[];
+  is_featured: boolean;
+  is_nsfw: boolean;
   created_at: string;
-  like_count?: number;
-  view_count?: number;
+  updated_at: string;
+  creator_username: string | null;
+  creator_avatar: string | null;
+  creator_roles: string[] | null;
+  like_count: number;
+  comment_count: number;
+  view_count: number;
 }
 
 interface UserProfileModalProps {
@@ -43,17 +54,33 @@ interface UserProfileModalProps {
 }
 
 export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProps) {
+  const { user: currentUser } = useAuth();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
   const [currentContentIndex, setCurrentContentIndex] = useState(0);
   const [showFriendRequestModal, setShowFriendRequestModal] = useState(false);
   
-  // User content state (temporarily empty until useContent is implemented)
-  const userContent: ContentItem[] = [];
-  const contentLoading = false;
+  // Check if the current user is viewing their own profile
+  const isCurrentUser = currentUser?.id === user?.id;
+  
+  // Handle friend request modal close
+  const handleFriendRequestClose = (e: React.MouseEvent) => {
+    e?.stopPropagation(); // Prevent event bubbling to parent modal
+    setShowFriendRequestModal(false);
+  };
+  
+  // Fetch user content
+  const { content: userContent, loading: contentLoading } = useUserContent(user?.id);
+  
+  // Ensure we have a valid user ID before making the request
+  useEffect(() => {
+    if (user?.id) {
+      console.log('Fetching content for user:', user.id);
+    }
+  }, [user?.id]);
   
   // Fetch follow data
-  const { actionLoading, toggleFollow } = useFollows(user?.id);
+  const { stats, actionLoading, toggleFollow } = useFollows(user?.id);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -107,7 +134,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     }
   };
 
-  const getContentIcon = (type: string) => {
+  const getContentIcon = (type: 'video' | 'audio' | 'image' | 'article' | string) => {
     switch (type) {
       case 'video': return '🎥';
       case 'audio': return '🎧';
@@ -118,11 +145,14 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   };
 
   const renderContentThumbnail = (item: ContentItem) => {
-    if (item.content_type === 'video' && item.external_url) {
+    const externalUrl = item.external_url || (item.media_urls?.[0] || null);
+    const thumbnailUrl = item.thumbnail_url || externalUrl;
+    
+    if (item.content_type === 'video' && externalUrl) {
       return (
         <div className="relative w-full h-full">
           <video
-            src={item.external_url}
+            src={externalUrl}
             className="w-full h-full object-cover"
             muted
             playsInline
@@ -137,10 +167,10 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
       );
     }
     
-    if (item.thumbnail_url || item.external_url) {
+    if (thumbnailUrl) {
       return (
         <img
-          src={item.thumbnail_url || item.external_url || ''}
+          src={thumbnailUrl}
           alt={item.title}
           className="w-full h-full object-cover"
         />
@@ -151,14 +181,42 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
       <div className="w-full h-full bg-gradient-to-br from-purple-600/30 to-pink-600/30 flex items-center justify-center">
         <span className="text-4xl">{getContentIcon(item.content_type)}</span>
       </div>
-    );
+    )
+  }
+  
+  const renderModal = () => {
+    if (user && showFriendRequestModal) {
+      return (
+        <SendFriendRequestModal
+          isOpen={showFriendRequestModal}
+          onClose={handleFriendRequestClose}
+          user={{
+            id: user.id,
+            username: user.username || '',
+            full_name: user.full_name,
+            roles: user.roles || [],
+            avatar_url: user.avatar_url,
+            is_verified: user.is_verified || false
+          }}
+          onSuccess={() => {
+            // Optional: Handle success if needed
+          }}
+        />
+      );
+    }
+    return null;
   };
 
   if (!isOpen || !user) return null;
 
   return (
     <>
-      {/* Fullscreen Modal */}
+      {/* Friend Request Modal - Higher z-index than profile modal */}
+      <div className="relative z-[2000]">
+        {renderModal()}
+      </div>
+      
+      {/* Profile Modal */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -220,36 +278,50 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
               )}
               
               <div className="flex gap-3 mt-4">
-                <Button
-                  onClick={() => toggleFollow(user.id)}
-                  disabled={actionLoading}
-                  className="flex-1 py-3 rounded-xl transition-all"
-                  variant="outline"
-                >
-                  {actionLoading ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Processing...
-                    </span>
-                  ) : (
-                    <span className="flex items-center justify-center">
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Follow
-                    </span>
-                  )}
-                </Button>
+                {!isCurrentUser && (
+                  <Button
+                    onClick={async () => {
+                      if (!user) return;
+                      try {
+                        const { error } = await toggleFollow(user.id);
+                        if (error) {
+                          console.error('Error toggling follow:', error);
+                        }
+                      } catch (err) {
+                        console.error('Error in follow handler:', err);
+                      }
+                    }}
+                    disabled={actionLoading}
+                    className="flex-1 py-3 rounded-xl transition-all"
+                    variant={stats?.is_following ? 'outline' : 'primary'}
+                  >
+                    {actionLoading ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center">
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        {stats?.is_following ? 'Following' : 'Follow'}
+                      </span>
+                    )}
+                  </Button>
+                )}
                 
-                <Button
-                  onClick={() => setShowFriendRequestModal(true)}
-                  className="flex-1 py-3 rounded-xl transition-all"
-                  variant="primary"
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Message
-                </Button>
+                {!isCurrentUser && (
+                  <Button
+                    onClick={() => setShowFriendRequestModal(true)}
+                    className="flex-1 py-3 rounded-xl transition-all"
+                    variant="primary"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Message
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -334,7 +406,7 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                 </div>
-              ) : userContent.length === 0 ? (
+              ) : !userContent?.length ? (
                 <div className="text-center py-12">
                   <p className="text-gray-400">No content available</p>
                 </div>

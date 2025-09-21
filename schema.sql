@@ -2124,12 +2124,12 @@ ALTER TABLE ONLY "public"."user_follows"
 
 
 ALTER TABLE ONLY "public"."user_likes"
-    ADD CONSTRAINT "user_likes_liked_id_fkey" FOREIGN KEY ("liked_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "user_likes_liked_id_fkey" FOREIGN KEY ("liked_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."user_likes"
-    ADD CONSTRAINT "user_likes_liker_id_fkey" FOREIGN KEY ("liker_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "user_likes_liker_id_fkey" FOREIGN KEY ("liker_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -2149,12 +2149,12 @@ ALTER TABLE ONLY "public"."user_matches"
 
 
 ALTER TABLE ONLY "public"."user_passes"
-    ADD CONSTRAINT "user_passes_passed_user_id_fkey" FOREIGN KEY ("passed_user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "user_passes_passed_user_id_fkey" FOREIGN KEY ("passed_user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."user_passes"
-    ADD CONSTRAINT "user_passes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "user_passes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 

@@ -43,8 +43,8 @@ export const LikedProfilesList = () => {
         // Get all user IDs that the current user has liked
         const { data: likes, error: likesError } = await supabase
           .from('user_likes')
-          .select('liked_user_id')
-          .eq('user_id', user.id) as { data: { liked_user_id: string }[], error: any };
+          .select('liked_id')
+          .eq('liker_id', user.id) as { data: { liked_id: string }[], error: any };
           
         if (likesError) throw likesError;
         
@@ -54,7 +54,7 @@ export const LikedProfilesList = () => {
         }
 
         // Get the actual user profiles
-        const likedUserIds = likes.map(like => like.liked_user_id);
+        const likedUserIds = likes.map(like => like.liked_id);
         const { data: users, error: usersError } = await supabase
           .from('profiles')
           .select('*')

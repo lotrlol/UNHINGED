@@ -161,31 +161,46 @@ export function useUserDiscovery() {
       setLoading(true)
       setError(null)
 
+      console.log('🔍 Fetching user interactions for user:', user.id)
+
       // Get users that current user hasn't liked/blocked yet
-      const [
-        { data: alreadyLiked },
-        { data: blockedUsers },
-        { data: passedUsers }
-      ] = await Promise.all([
-        supabase
-          .from('user_likes')
-          .select('liked_id')
-          .eq('liker_id', user.id),
-        supabase
-          .from('user_blocks')
-          .select('blocked_id')
-          .eq('blocker_id', user.id),
-        includePassed 
-          ? Promise.resolve({ data: [] }) // Don't exclude passed users
-          : supabase
-              .from('user_passes')
-              .select('passed_user_id')
-              .eq('user_id', user.id)
-      ]) as [
-        { data: { liked_id: string }[] | null },
-        { data: { blocked_id: string }[] | null },
-        { data: { passed_user_id: string }[] | null }
-      ]
+      const likesQuery = supabase
+        .from('user_likes')
+        .select('liked_id')
+        .eq('liker_id', user.id)
+
+      const blocksQuery = supabase
+        .from('user_blocks')
+        .select('blocked_id')
+        .eq('blocker_id', user.id)
+
+      const passesQuery = includePassed
+        ? Promise.resolve({ data: [], error: null })
+        : supabase
+            .from('user_passes')
+            .select('passed_user_id')
+            .eq('user_id', user.id)
+
+      const [likesResult, blocksResult, passesResult] = await Promise.all([
+        likesQuery,
+        blocksQuery,
+        passesQuery
+      ])
+
+      const { data: alreadyLiked, error: likesError } = likesResult as any
+      const { data: blockedUsers, error: blocksError } = blocksResult as any
+      const { data: passedUsers, error: passesError } = passesResult as any
+
+      // Log any errors from the queries
+      if (likesError) console.error('❌ Error fetching likes:', likesError)
+      if (blocksError) console.error('❌ Error fetching blocks:', blocksError)
+      if (passesError && !includePassed) console.error('❌ Error fetching passes:', passesError)
+
+      console.log('📊 Query results:', {
+        liked: alreadyLiked?.length || 0,
+        blocked: blockedUsers?.length || 0,
+        passed: passedUsers?.length || 0
+      })
 
       const likedUserIds = alreadyLiked?.map(like => like.liked_id) || []
       const blockedUserIds = blockedUsers?.map(block => block.blocked_id) || []
@@ -195,12 +210,18 @@ export function useUserDiscovery() {
       const excludedIds = [...new Set([...likedUserIds, ...blockedUserIds, ...passedUserIds, user.id])]
 
       // Fetch discoverable users
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select('*')
         .eq('flagged', false)
-        .not('id', 'in', `(${excludedIds.join(',')})`)
         .limit(100) // Get more users for better filtering
+
+      // Only add the 'not in' filter if there are excluded IDs
+      if (excludedIds.length > 0) {
+        query = query.not('id', 'in', `(${excludedIds.join(',')})`)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
 
@@ -332,60 +353,140 @@ export function useUserDiscovery() {
   }, [allUsers, applyFiltersAndSorting, fetchDiscoverableUsers])
 
   const likeUser = useCallback(async (userId: string) => {
-    if (!user) return { error: 'Not authenticated' }
-
+    if (!user?.id) return { error: 'Not authenticated' };
+    
+    console.log(`🔄 Attempting to like user ${userId} as ${user.id}`);
+    
     try {
-      // Check if there's a match first
-      const { data: existingLike, error: checkError } = await supabase
+      // First, check if the like already exists
+      const { data: existingLike, error: checkLikeError } = await supabase
         .from('user_likes')
-        .select('*')
-        .eq('liked_id', user.id)
+        .select('id')
+        .eq('liker_id', user.id)
+        .eq('liked_id', userId)
+        .maybeSingle();
+
+      if (checkLikeError) {
+        console.error('❌ Error checking for existing like:', checkLikeError);
+        throw checkLikeError;
+      }
+
+      // If they've already liked this person, return success
+      if (existingLike) {
+        console.log('ℹ️ User already liked this profile');
+        return { match: false };
+      }
+
+      // Check for mutual like (if the other user has already liked the current user)
+      console.log('🔍 Checking for mutual like...');
+      const { data: mutualLike, error: checkMutualError } = await supabase
+        .from('user_likes')
+        .select('id, created_at')
         .eq('liker_id', userId)
-        .single()
+        .eq('liked_id', user.id)
+        .maybeSingle();
 
-      // If there's a match, create a match record
-      if (existingLike && !checkError) {
-        const { data: match, error: matchError } = await supabase
+      if (checkMutualError) {
+        console.error('❌ Error checking for mutual like:', checkMutualError);
+        throw checkMutualError;
+      }
+
+      // Insert the like
+      console.log(`💖 Creating like from ${user.id} to ${userId}`);
+      const { data: newLike, error: likeError } = await supabase
+        .from('user_likes')
+        .insert([
+          { 
+            liker_id: user.id, 
+            liked_id: userId 
+          }
+        ])
+        .select()
+        .single();
+
+      if (likeError || !newLike) {
+        console.error('❌ Error creating like:', likeError);
+        throw likeError || new Error('Failed to create like');
+      }
+
+      console.log('✅ Like created successfully:', newLike);
+
+      // If it's a mutual like, create a match
+      if (mutualLike) {
+        console.log('✨ Mutual like detected! Creating match...');
+        
+        // Check if match already exists to prevent duplicates
+        const { data: existingMatch, error: checkMatchError } = await supabase
           .from('user_matches')
-          .insert({
-            user1_id: user.id,
-            user2_id: userId,
-            chat_id: null // Will be set when first message is sent
-          } as never)
-          .select()
-          .single()
+          .select('id')
+          .or(`and(user1_id.eq.${user.id},user2_id.eq.${userId}),and(user1_id.eq.${userId},user2_id.eq.${user.id})`)
+          .maybeSingle();
 
-        if (matchError) throw matchError
+        if (checkMatchError) {
+          console.error('❌ Error checking for existing match:', checkMatchError);
+          throw checkMatchError;
+        }
 
-        // Get the other user's profile for the match notification
-        const { data: otherUser } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single()
+        if (!existingMatch) {
+          console.log('💬 Creating new chat for the match...');
+          
+          // Create a new chat for the match
+          const { data: chat, error: chatError } = await supabase
+            .from('chats')
+            .insert([
+              {
+                is_direct_message: true,
+                created_by: user.id,
+                name: null,
+                description: null,
+                is_public: false,
+                avatar_url: null
+              }
+            ])
+            .select('id')
+            .single();
 
-        return { 
-          match: true, 
-          matchData: { 
-            ...match, 
-            other_user: otherUser 
-          } 
+          if (chatError || !chat) {
+            console.error('❌ Error creating chat:', chatError);
+            throw chatError || new Error('Failed to create chat');
+          }
+
+          console.log('🤝 Creating match with chat ID:', chat.id);
+          
+          // Create the match with the chat ID
+          const { data: newMatch, error: matchError } = await supabase
+            .from('user_matches')
+            .insert([
+              {
+                user1_id: user.id,
+                user2_id: userId,
+                chat_id: chat.id
+              }
+            ])
+            .select()
+            .single();
+
+          if (matchError || !newMatch) {
+            console.error('❌ Error creating match:', matchError);
+            throw matchError || new Error('Failed to create match');
+          }
+
+          console.log('🎉 Match created successfully:', newMatch);
+          return { match: true, userId, matchId: newMatch.id };
+        } else {
+          console.log('ℹ️ Match already exists');
+          return { match: true, userId, matchId: existingMatch.id };
         }
       }
 
-      // If no match, just record the like
-      const { error } = await supabase
-        .from('user_likes')
-        .insert({
-          liker_id: user.id,
-          liked_id: userId
-        } as never)
-
-      if (error) throw error
-      return { match: false }
+      console.log('👍 Like processed successfully (no match)');
+      return { match: false };
     } catch (err) {
-      console.error('Error liking user:', err)
-      return { error: err instanceof Error ? err.message : 'Failed to like user' }
+      console.error('❌ Error in likeUser:', err);
+      return { 
+        error: err instanceof Error ? err.message : 'Failed to like user',
+        details: err
+      };
     }
   }, [user])
 
@@ -393,12 +494,26 @@ export function useUserDiscovery() {
     if (!user) return { error: 'Not authenticated' }
 
     try {
+      // Check if the pass already exists
+      const { data: existingPass } = await supabase
+        .from('user_passes')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('passed_user_id', userId)
+        .maybeSingle()
+
+      // If it already exists, return success
+      if (existingPass) {
+        return { success: true }
+      }
+
+      // If it doesn't exist, insert it
       const { error } = await supabase
         .from('user_passes')
         .insert({
           user_id: user.id,
           passed_user_id: userId
-        } as never)
+        } as any)
 
       if (error) throw error
       return { success: true }
@@ -442,10 +557,10 @@ export function useUserDiscovery() {
       if (error) throw error
 
       // Transform matches to include the "other" user
-      const transformedMatches: UserMatch[] = (data || []).map(match => {
+      const transformedMatches: UserMatch[] = ((data as any) || []).map(match => {
         const isUser1 = match.user1_id === user.id
         const otherProfile = isUser1 ? match.user2_profile : match.user1_profile
-        
+
         return {
           id: match.id,
           user1_id: match.user1_id,

@@ -150,86 +150,98 @@ export function useFollows(targetUserId?: string) {
     }
   }, [user, targetUserId])
 
-  const followUser = useCallback(async (userIdToFollow: string) => {
+  const toggleFollow = useCallback(async (targetUserId: string) => {
     if (!user) return { error: 'Must be logged in to follow users' }
-    if (user.id === userIdToFollow) return { error: 'Cannot follow yourself' }
+    if (user.id === targetUserId) return { error: 'Cannot follow yourself' }
 
     try {
       setActionLoading(true)
-      setError(null)
-
-      // Check if already following
-      const { data: existingFollow } = await supabase
-        .from('user_follows')
-        .select('id')
-        .eq('follower_id', user.id)
-        .eq('following_id', userIdToFollow)
-        .maybeSingle()
-
-      if (existingFollow) {
-        return { error: 'Already following this user' }
+      
+      // Check current follow status
+      const isCurrentlyFollowing = stats.is_following
+      
+      if (isCurrentlyFollowing) {
+        // Unfollow
+        const { error } = await supabase
+          .from('user_follows')
+          .delete()
+          .eq('follower_id', user.id)
+          .eq('following_id', targetUserId)
+          
+        if (error) throw error
+        
+        // Optimistically update the UI
+        setStats(prev => ({
+          ...prev,
+          followers_count: Math.max(0, prev.followers_count - 1),
+          is_following: false
+        }))
+        
+        // Remove from followers list if viewing own profile
+        if (!targetUserId) {
+          setFollowers(prev => prev.filter(f => f.follower_id !== user.id))
+        }
+      } else {
+        // Follow
+        const { error } = await supabase
+          .from('user_follows')
+          .insert({
+            follower_id: user.id,
+            following_id: targetUserId
+          })
+          .select()
+          .single()
+          
+        if (error) throw error
+        
+        // Optimistically update the UI
+        setStats(prev => ({
+          ...prev,
+          followers_count: prev.followers_count + 1,
+          is_following: true
+        }))
+        
+        // Add to followers list if viewing own profile
+        if (!targetUserId) {
+          // We don't have the full follower data here, so we'll just add a placeholder
+          // The next fetch will replace this with the actual data
+          setFollowers(prev => [
+            {
+              id: `temp-${Date.now()}`,
+              follower_id: user.id,
+              following_id: targetUserId,
+              created_at: new Date().toISOString(),
+              follower: {
+                id: user.id,
+                username: user.user_metadata?.username || user.email?.split('@')[0] || 'user',
+                full_name: user.user_metadata?.full_name || '',
+                avatar_url: user.user_metadata?.avatar_url || null,
+                roles: [],
+                is_verified: false
+              }
+            },
+            ...prev
+          ])
+        }
       }
-
-      // Create follow relationship
-      const { error } = await supabase
-        .from('user_follows')
-        .insert({
-          follower_id: user.id,
-          following_id: userIdToFollow
-        })
-
-      if (error) throw error
-
-      // Refresh data
+      
+      // Refresh data to ensure consistency
       await fetchFollowData()
-
+      
       return { error: null }
     } catch (err) {
-      console.error('Error following user:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to follow user'
+      console.error('Error toggling follow:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update follow status'
       setError(errorMessage)
+      
+      // Revert optimistic updates on error
+      await fetchFollowData()
+      
       return { error: errorMessage }
     } finally {
       setActionLoading(false)
     }
-  }, [user, fetchFollowData])
-
-  const unfollowUser = useCallback(async (userIdToUnfollow: string) => {
-    if (!user) return { error: 'Must be logged in to unfollow users' }
-
-    try {
-      setActionLoading(true)
-      setError(null)
-
-      const { error } = await supabase
-        .from('user_follows')
-        .delete()
-        .eq('follower_id', user.id)
-        .eq('following_id', userIdToUnfollow)
-
-      if (error) throw error
-
-      // Refresh data
-      await fetchFollowData()
-
-      return { error: null }
-    } catch (err) {
-      console.error('Error unfollowing user:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to unfollow user'
-      setError(errorMessage)
-      return { error: errorMessage }
-    } finally {
-      setActionLoading(false)
-    }
-  }, [user, fetchFollowData])
-
-  const toggleFollow = useCallback(async (userIdToToggle: string) => {
-    if (stats.is_following) {
-      return await unfollowUser(userIdToToggle)
-    } else {
-      return await followUser(userIdToToggle)
-    }
-  }, [stats.is_following, followUser, unfollowUser])
+  }, [user, fetchFollowData, stats.is_following])
 
   // Set up real-time subscription for follow changes
   useEffect(() => {
@@ -268,8 +280,6 @@ export function useFollows(targetUserId?: string) {
     loading,
     error,
     actionLoading,
-    followUser,
-    unfollowUser,
     toggleFollow,
     refetch: fetchFollowData
   }
