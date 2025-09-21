@@ -26,7 +26,6 @@ const App: React.FC<AppProps> = () => {
   const [activeTab, setActiveTab] = useState<Tab>('collabs')
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const [userClosedOnboarding, setUserClosedOnboarding] = useState(false)
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [mounted, setMounted] = useState(false)
   const { user, loading: authLoading } = useAuth()
@@ -38,23 +37,17 @@ const App: React.FC<AppProps> = () => {
   }, [])
 
   useEffect(() => {
-    // Only check onboarding status if we have a user and profile data is loaded
-    if (user && !profileLoading && !authLoading) {
-      // If user has no profile or hasn't completed onboarding, show it
-      // But only if they haven't explicitly closed it
-      if (!userClosedOnboarding && (!profile || !profile.onboarding_completed)) {
-        setShowOnboarding(true);
-      } else {
-        setShowOnboarding(false);
-      }
+    // Only show onboarding if we have a user but no profile yet (new user)
+    if (user && !profile && !profileLoading && !authLoading) {
+      setShowOnboarding(true);
+    } else if (profile) {
+      setShowOnboarding(false);
     }
-  }, [user, profile, profileLoading, authLoading, userClosedOnboarding])
+  }, [user, profile, profileLoading, authLoading])
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false)
-    if (!profile && !userClosedOnboarding) {
-      setShowOnboarding(true)
-    }
+    // The useEffect will handle showing onboarding for new users
   }
 
   const handleOnboardingComplete = () => {
@@ -65,7 +58,6 @@ const App: React.FC<AppProps> = () => {
   const handleOnboardingClose = () => {
     console.log('handleOnboardingClose called');
     setShowOnboarding(false);
-    setUserClosedOnboarding(true); // Prevent auto-reopening
   };
 
   const handleAuthModeChange = (mode: 'signin' | 'signup') => {
@@ -168,17 +160,6 @@ const App: React.FC<AppProps> = () => {
       </div>
     );
   }
-
-  // Temporary logout function
-  const tempLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
 
   // Main app layout with glass effect
   return (

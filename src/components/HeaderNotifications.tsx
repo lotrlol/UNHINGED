@@ -43,17 +43,6 @@ export function HeaderNotifications() {
             </motion.div>
           )}
         </motion.button>
-
-        {/* Discrete Logout Button */}
-        <motion.button
-          onClick={handleLogout}
-          className="p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-gray-300 hover:text-red-300 hover:bg-red-900/20 transition-all shadow-lg"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          title="Sign out"
-        >
-          <LogOut className="w-5 h-5" />
-        </motion.button>
       </div>
 
       {/* Friend Requests Modal */}

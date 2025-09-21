@@ -10,13 +10,8 @@ import {
   Sparkles, 
   Settings,
   Upload,
-  Loader2,
-  Check,
-  ChevronDown,
-  Plus,
-  Trash2
+  Loader2
 } from 'lucide-react';
-import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { useProfile } from '../hooks/useProfile';
 import { useAuth } from '../hooks/useAuth';
@@ -231,7 +226,7 @@ export function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalPr
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900"
+        className="fixed inset-0 z-[100] bg-gray-900"
       >
         {/* Animated background blobs */}
         <motion.div 
@@ -246,7 +241,7 @@ export function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalPr
         />
 
         {/* Header */}
-        <div className="relative z-10 flex items-center justify-between p-4 bg-black/40 backdrop-blur-md border-b border-white/10">
+        <div className="relative z-10 flex items-center justify-between p-4 bg-gray-800 border-b border-white/10">
           <button
             onClick={onClose}
             className="p-2 rounded-full bg-black/30 hover:bg-black/50 text-white transition-colors"
@@ -368,7 +363,7 @@ export function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalPr
 
               {/* Basic Info */}
               <div className="pt-12 space-y-4">
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="bg-gray-800 border border-white/10 rounded-2xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <User className="w-5 h-5 text-purple-400" />
                     <h3 className="text-lg font-semibold text-white">Basic Information</h3>
@@ -425,7 +420,7 @@ export function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalPr
                 </div>
 
                 {/* Creator Roles */}
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="bg-gray-800 border border-white/10 rounded-2xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Users className="w-5 h-5 text-pink-400" />
                     <h3 className="text-lg font-semibold text-white">Creator Roles</h3>
@@ -463,7 +458,7 @@ export function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalPr
                 </div>
 
                 {/* Looking For */}
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="bg-gray-800 border border-white/10 rounded-2xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Users className="w-5 h-5 text-cyan-400" />
                     <h3 className="text-lg font-semibold text-white">Looking to Collaborate With</h3>
@@ -501,7 +496,7 @@ export function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalPr
                 </div>
 
                 {/* Skills */}
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="bg-gray-800 border border-white/10 rounded-2xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Sparkles className="w-5 h-5 text-green-400" />
                     <h3 className="text-lg font-semibold text-white">Skills</h3>
@@ -547,7 +542,7 @@ export function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalPr
                 </div>
 
                 {/* Creative Vibes */}
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="bg-gray-800 border border-white/10 rounded-2xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Sparkles className="w-5 h-5 text-yellow-400" />
                     <h3 className="text-lg font-semibold text-white">Creative Vibes</h3>
@@ -585,7 +580,7 @@ export function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalPr
                 </div>
 
                 {/* Location */}
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="bg-gray-800 border border-white/10 rounded-2xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <MapPin className="w-5 h-5 text-blue-400" />
                     <h3 className="text-lg font-semibold text-white">Location</h3>
@@ -622,7 +617,7 @@ export function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalPr
                 </div>
 
                 {/* Preferences */}
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="bg-gray-800 border border-white/10 rounded-2xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Settings className="w-5 h-5 text-gray-400" />
                     <h3 className="text-lg font-semibold text-white">Preferences</h3>
@@ -651,7 +646,7 @@ export function EditProfileModal({ isOpen, onClose, onSave }: EditProfileModalPr
               </div>
 
               {/* Save Button */}
-              <div className="sticky bottom-0 bg-gradient-to-t from-gray-900 via-gray-900/95 to-transparent pt-6 pb-4">
+              <div className="sticky bottom-0 bg-gray-900 pt-6 pb-4">
                 <motion.button
                   type="submit"
                   disabled={loading || uploadingAvatar || uploadingBanner}

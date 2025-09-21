@@ -248,7 +248,7 @@ export function ChatModal({ isOpen, onClose, chatId }: ChatModalProps) {
             <div className="text-center py-12 lg:py-20">
               <div className="text-4xl mb-4">💬</div>
               <h3 className="font-medium text-gray-900 mb-2 text-lg lg:text-xl">Start the conversation!</h3>
-              <p className="text-gray-600 text-sm lg:text-base max-w-md mx-auto">
+              <p className="text-gray-600 text-gray-900 max-w-md mx-auto">
                 Say hello and discuss your collaboration ideas.
               </p>
             </div>
@@ -330,7 +330,7 @@ export function ChatModal({ isOpen, onClose, chatId }: ChatModalProps) {
                         className="flex items-center gap-2 w-full p-2 text-left hover:bg-gray-50 rounded-lg transition-colors"
                       >
                         <Image className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
-                        <span className="text-sm lg:text-base">Photo</span>
+                        <span className="text-sm lg:text-base text-gray-900">Photo</span>
                       </button>
                       <button
                         type="button"
@@ -341,7 +341,7 @@ export function ChatModal({ isOpen, onClose, chatId }: ChatModalProps) {
                         className="flex items-center gap-2 w-full p-2 text-left hover:bg-gray-50 rounded-lg transition-colors"
                       >
                         <Video className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" />
-                        <span className="text-sm lg:text-base">Video</span>
+                        <span className="text-sm lg:text-base text-gray-900">Video</span>
                       </button>
                     </div>
                   </>
@@ -364,7 +364,7 @@ export function ChatModal({ isOpen, onClose, chatId }: ChatModalProps) {
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Type your message..."
-                className="flex-1 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                className="flex-1 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base text-gray-900"
                 disabled={sending || !chatId}
                 maxLength={1000}
               />

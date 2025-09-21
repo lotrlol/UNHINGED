@@ -113,7 +113,19 @@ export function ProjectCard({ project, onSkip }: ProjectCardProps) {
         </div>
 
         {/* Roles needed */}
-       
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Users className="w-4 h-4 text-purple-400" />
+            <span className="text-sm font-medium text-gray-300">Looking for</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {project.roles_needed.map((role) => (
+              <Badge key={role} className="bg-pink-900/40 text-pink-200 border border-pink-700">
+                {role}
+              </Badge>
+            ))}
+          </div>
+        </div>
 
         {/* Tags */}
         {project.tags.length > 0 && (

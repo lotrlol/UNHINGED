@@ -2,6 +2,96 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
+// Helper function to get public URL with cache busting
+const getPublicUrl = (path: string | null | undefined, bucket: string) => {
+  if (!path) return null;
+  
+  // If it's already a full URL, return it as-is
+  if (path.startsWith('http')) {
+    return path;
+  }
+  
+  const { data } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(path);
+  
+  // Add a cache-busting timestamp
+  return `${data.publicUrl}?t=${new Date().getTime()}`;
+};
+
+// Database types
+interface UserLike {
+  id: string
+  liker_id: string
+  liked_id: string
+  created_at: string
+}
+
+interface UserPass {
+  id: string
+  user_id: string
+  passed_user_id: string
+  created_at: string
+}
+
+interface UserBlock {
+  id: string
+  blocker_id: string
+  blocked_id: string
+  created_at: string
+}
+
+// Profile type from the database
+interface DatabaseProfile {
+  id: string
+  username: string
+  full_name: string
+  roles: string[]
+  skills: string[]
+  looking_for: string[]
+  tagline: string | null
+  vibe_words: string[]
+  location: string | null
+  is_remote: boolean
+  avatar_url: string | null
+  avatar_path: string | null
+  cover_url: string | null
+  cover_path: string | null
+  is_verified: boolean
+  created_at: string
+  flagged: boolean
+}
+
+// Extend the Supabase client with our table types
+declare module '@supabase/supabase-js' {
+  interface Database {
+    public: {
+      Tables: {
+        user_likes: {
+          Row: UserLike
+          Insert: Omit<UserLike, 'id' | 'created_at'>
+          Update: Partial<Omit<UserLike, 'id' | 'created_at'>>
+        }
+        user_passes: {
+          Row: UserPass
+          Insert: Omit<UserPass, 'id' | 'created_at'>
+          Update: Partial<Omit<UserPass, 'id' | 'created_at'>>
+        }
+        user_blocks: {
+          Row: UserBlock
+          Insert: Omit<UserBlock, 'id' | 'created_at'>
+          Update: Partial<Omit<UserBlock, 'id' | 'created_at'>>
+        }
+        user_matches: {
+          Row: UserMatch
+          Insert: Omit<UserMatch, 'id' | 'created_at'>
+          Update: Partial<Omit<UserMatch, 'id' | 'created_at'>>
+        }
+      }
+    }
+  }
+}
+
 export interface DiscoverableUser {
   id: string
   username: string
@@ -56,9 +146,10 @@ export function useUserDiscovery() {
   const [matches, setMatches] = useState<UserMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Track if a like operation is in progress
   const [liking, setLiking] = useState(false)
 
-  const fetchDiscoverableUsers = useCallback(async (newFilters: DiscoveryFilters = {}) => {
+  const fetchDiscoverableUsers = useCallback(async (newFilters: DiscoveryFilters = {}, includePassed = false) => {
     if (!user) {
       setUsers([])
       setAllUsers([])
@@ -70,42 +161,66 @@ export function useUserDiscovery() {
       setLoading(true)
       setError(null)
 
-      // Get users that current user hasn't liked/disliked yet
-      const { data: alreadyLiked } = await supabase
-        .from('user_likes')
-        .select('liked_id')
-        .eq('liker_id', user.id)
+      // Get users that current user hasn't liked/blocked yet
+      const [
+        { data: alreadyLiked },
+        { data: blockedUsers },
+        { data: passedUsers }
+      ] = await Promise.all([
+        supabase
+          .from('user_likes')
+          .select('liked_id')
+          .eq('liker_id', user.id),
+        supabase
+          .from('user_blocks')
+          .select('blocked_id')
+          .eq('blocker_id', user.id),
+        includePassed 
+          ? Promise.resolve({ data: [] }) // Don't exclude passed users
+          : supabase
+              .from('user_passes')
+              .select('passed_user_id')
+              .eq('user_id', user.id)
+      ]) as [
+        { data: { liked_id: string }[] | null },
+        { data: { blocked_id: string }[] | null },
+        { data: { passed_user_id: string }[] | null }
+      ]
 
       const likedUserIds = alreadyLiked?.map(like => like.liked_id) || []
-
-      // Get users that haven't been blocked
-      const { data: blockedUsers } = await supabase
-        .from('user_blocks')
-        .select('blocked_id')
-        .eq('blocker_id', user.id)
-
       const blockedUserIds = blockedUsers?.map(block => block.blocked_id) || []
+      const passedUserIds = includePassed ? [] : passedUsers?.map(pass => pass.passed_user_id) || []
 
       // Combine excluded user IDs
-      const excludedIds = [...likedUserIds, ...blockedUserIds, user.id]
+      const excludedIds = [...new Set([...likedUserIds, ...blockedUserIds, ...passedUserIds, user.id])]
 
       // Fetch discoverable users
-      let query = supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('flagged', false)
         .not('id', 'in', `(${excludedIds.join(',')})`)
         .limit(100) // Get more users for better filtering
 
-      const { data, error } = await query
-
       if (error) throw error
 
-      const fetchedUsers = data || []
-      setAllUsers(fetchedUsers)
+      // Process user data to format avatar and cover URLs
+      const processedUsers = (data as DatabaseProfile[] || []).map(user => ({
+        ...user,
+        // Format avatar URL if it exists
+        avatar_url: user.avatar_path 
+          ? getPublicUrl(user.avatar_path, 'avatars') 
+          : user.avatar_url,
+        // Format cover URL if it exists
+        cover_url: user.cover_path 
+          ? getPublicUrl(user.cover_path, 'covers')
+          : user.cover_url
+      }));
+
+      setAllUsers(processedUsers);
       
       // Apply filters and sorting
-      const filteredUsers = applyFiltersAndSorting(fetchedUsers, newFilters)
+      const filteredUsers = applyFiltersAndSorting(processedUsers, newFilters)
       setUsers(filteredUsers)
       setFilters(newFilters)
     } catch (err) {
@@ -205,10 +320,94 @@ export function useUserDiscovery() {
   }, [])
 
   const updateFilters = useCallback((newFilters: DiscoveryFilters) => {
-    const filteredUsers = applyFiltersAndSorting(allUsers, newFilters)
-    setUsers(filteredUsers)
-    setFilters(newFilters)
-  }, [allUsers, applyFiltersAndSorting])
+    // If we're clearing all filters, include passed users
+    const includePassed = Object.keys(newFilters).length === 0
+    if (includePassed) {
+      fetchDiscoverableUsers(newFilters, true)
+    } else {
+      const filteredUsers = applyFiltersAndSorting(allUsers, newFilters)
+      setUsers(filteredUsers)
+      setFilters(newFilters)
+    }
+  }, [allUsers, applyFiltersAndSorting, fetchDiscoverableUsers])
+
+  const likeUser = useCallback(async (userId: string) => {
+    if (!user) return { error: 'Not authenticated' }
+
+    try {
+      // Check if there's a match first
+      const { data: existingLike, error: checkError } = await supabase
+        .from('user_likes')
+        .select('*')
+        .eq('liked_id', user.id)
+        .eq('liker_id', userId)
+        .single()
+
+      // If there's a match, create a match record
+      if (existingLike && !checkError) {
+        const { data: match, error: matchError } = await supabase
+          .from('user_matches')
+          .insert({
+            user1_id: user.id,
+            user2_id: userId,
+            chat_id: null // Will be set when first message is sent
+          } as never)
+          .select()
+          .single()
+
+        if (matchError) throw matchError
+
+        // Get the other user's profile for the match notification
+        const { data: otherUser } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single()
+
+        return { 
+          match: true, 
+          matchData: { 
+            ...match, 
+            other_user: otherUser 
+          } 
+        }
+      }
+
+      // If no match, just record the like
+      const { error } = await supabase
+        .from('user_likes')
+        .insert({
+          liker_id: user.id,
+          liked_id: userId
+        } as never)
+
+      if (error) throw error
+      return { match: false }
+    } catch (err) {
+      console.error('Error liking user:', err)
+      return { error: err instanceof Error ? err.message : 'Failed to like user' }
+    }
+  }, [user])
+
+  const passUser = useCallback(async (userId: string) => {
+    if (!user) return { error: 'Not authenticated' }
+
+    try {
+      const { error } = await supabase
+        .from('user_passes')
+        .insert({
+          user_id: user.id,
+          passed_user_id: userId
+        } as never)
+
+      if (error) throw error
+      return { success: true }
+    } catch (err) {
+      console.error('Error passing user:', err)
+      return { error: err instanceof Error ? err.message : 'Failed to pass user' }
+    }
+  }, [user])
+
   const fetchUserMatches = useCallback(async () => {
     if (!user) {
       setMatches([])
@@ -220,8 +419,6 @@ export function useUserDiscovery() {
         .from('user_matches')
         .select(`
           *,
-          user1_id:user1_id,
-          user2_id:user2_id,
           user1_profile:profiles!user_matches_user1_id_fkey(
             id,
             full_name,
@@ -272,56 +469,12 @@ export function useUserDiscovery() {
     }
   }, [user])
 
-  const likeUser = useCallback(async (likedUserId: string) => {
-    if (!user || liking) return { error: 'Cannot like user' }
-
-    try {
-      setLiking(true)
-
-      const { error } = await supabase
-        .from('user_likes')
-        .insert({
-          liker_id: user.id,
-          liked_id: likedUserId
-        })
-
-      if (error) throw error
-
-      // Remove the liked user from the discovery list
-      setUsers(prev => prev.filter(u => u.id !== likedUserId))
-      setAllUsers(prev => prev.filter(u => u.id !== likedUserId))
-
-      // Refresh matches in case a new match was created
-      await fetchUserMatches()
-
-      return { error: null }
-    } catch (err) {
-      console.error('Error liking user:', err)
-      return { error: err instanceof Error ? err.message : 'Failed to like user' }
-    } finally {
-      setLiking(false)
-    }
-  }, [user, liking, fetchUserMatches])
-
-  const passUser = useCallback(async (passedUserId: string) => {
-    if (!user) return { error: 'Cannot pass user' }
-
-    try {
-      // For now, we'll just remove them from the list
-      // Later you could implement a "passes" table to track this
-      setUsers(prev => prev.filter(u => u.id !== passedUserId))
-      setAllUsers(prev => prev.filter(u => u.id !== passedUserId))
-      return { error: null }
-    } catch (err) {
-      console.error('Error passing user:', err)
-      return { error: err instanceof Error ? err.message : 'Failed to pass user' }
-    }
-  }, [user])
-
+  // Fetch discoverable users when component mounts or user changes
   useEffect(() => {
-    fetchDiscoverableUsers(filters)
-    fetchUserMatches()
-  }, [user])
+    if (user) {
+      fetchDiscoverableUsers(filters)
+    }
+  }, [user, fetchDiscoverableUsers])
 
   // Set up real-time subscription for new matches
   useEffect(() => {

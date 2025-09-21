@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { GlassCard } from './ui/GlassCard';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/Avatar';
+import { Avatar, AvatarImage } from './ui/Avatar';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { MapPin, Calendar, Edit, Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
@@ -204,13 +204,6 @@ export function ProfileCard({
     // You might want to handle banner removal on the server here
   };
 
-  const handleRemoveAvatar = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPreviewAvatar(null);
-    if (avatarInputRef.current) avatarInputRef.current.value = '';
-    // You might want to handle avatar removal on the server here
-  };
-
   return (
     <div className={cn('w-full overflow-hidden', className)}>
       {/* Banner */}
@@ -283,29 +276,24 @@ export function ProfileCard({
               <div className="relative w-full h-full">
                 <Avatar className="w-full h-full">
                   <AvatarImage src={previewAvatar || avatarUrl} alt={fullName || username} />
-                  <AvatarFallback className="text-4xl font-bold bg-gradient-to-br from-purple-600 to-pink-600 text-white">
-                    {fullName 
-                      ? fullName.split(' ').map(n => n[0]).join('').toUpperCase()
-                      : username.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
                 </Avatar>
                 
                 {onAvatarChange && (
                   <>
                     <div 
-                      className="absolute inset-0 rounded-full bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer p-2 text-center"
+                      className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       onClick={() => !isUploading && avatarInputRef.current?.click()}
                     >
                       {isUploading === 'avatar' ? (
-                        <Loader2 className="w-6 h-6 animate-spin text-white mb-1" />
+                        <Loader2 className="w-6 h-6 animate-spin text-white" />
                       ) : (
-                        <>
-                          <Edit className="w-5 h-5 text-white mb-1" />
+                        <div className="text-center">
+                          <Edit className="w-5 h-5 text-white mb-1 block mx-auto" />
                           <p className="text-white text-xs">Change Photo</p>
                           <p className="text-white/70 text-[10px] mt-1">
                             {UPLOAD_GUIDELINES.avatar.recommended}
                           </p>
-                        </>
+                        </div>
                       )}
                     </div>
                     <input
@@ -320,16 +308,6 @@ export function ProfileCard({
               </div>
             </div>
             
-            {onAvatarChange && (previewAvatar || avatarUrl) && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0 min-w-0 bg-red-500/20 hover:bg-red-500/30 border-red-500/30 hover:border-red-500/40"
-                onClick={handleRemoveAvatar}
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            )}
           </div>
 
           {/* Edit Profile Button */}

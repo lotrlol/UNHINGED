@@ -158,27 +158,25 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   if (!isOpen || !user) return null;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Fullscreen Modal */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-gradient-to-br from-gray-900 via-white-900/100 to-gray-900"
+    <>
+      {/* Fullscreen Modal */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] bg-gradient-to-br from-gray-900 via-white-900/100 to-gray-900"
+      >
+        {/* Header */}
+        <div className="relative z-10 flex items-center justify-between p-4 bg-black/40 backdrop-blur-md border-b border-white/10">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full bg-black/30 hover:bg-black/50 text-white transition-colors"
           >
-            {/* Header */}
-            <div className="relative z-10 flex items-center justify-between p-4 bg-black/40 backdrop-blur-md border-b border-white/10">
-              <button
-                onClick={onClose}
-                className="p-2 rounded-full bg-black/30 hover:bg-black/50 text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              <h1 className="text-lg font-semibold text-white">Profile</h1>
-              <div className="w-10" /> {/* Spacer for centering */}
-            </div>
+            <X className="w-6 h-6" />
+          </button>
+          <h1 className="text-lg font-semibold text-white">Profile</h1>
+          <div className="w-10" /> {/* Spacer for centering */}
+        </div>
 
             {/* Scrollable Content */}
             <div className="h-full overflow-y-auto pb-20">
@@ -462,25 +460,35 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                 )}
               </div>
             </div>
-          </motion.div>
+        {/* Main Content */}
+        <div className="h-full overflow-y-auto pb-20">
+          {/* User Info Section */}
+          <div className="relative">
+            {/* User content goes here */}
+          </div>
+        </div>
+      </motion.div>
 
-          {/* Content Lightbox */}
-          <AnimatePresence>
-            {selectedContent && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center"
-                onClick={() => setSelectedContent(null)}
-              >
-                {/* Close button */}
-                <button
-                  onClick={() => setSelectedContent(null)}
-                  className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+      {/* Content Lightbox */}
+      <AnimatePresence>
+        {selectedContent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center"
+            onClick={() => setSelectedContent(null)}
+          >
+            {/* Close button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedContent(null);
+              }}
+              className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
 
                 {/* Navigation buttons */}
                 {currentContentIndex > 0 && (
@@ -549,10 +557,6 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                   </div>
                 </div>
               </motion.div>
-            )}
-          </AnimatePresence>
-        </>
-      )}
 
       {/* Friend Request Modal */}
       <SendFriendRequestModal
@@ -560,10 +564,10 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
         onClose={() => setShowFriendRequestModal(false)}
         user={user}
         onSuccess={() => {
-          setShowFriendRequestModal(false)
+          setShowFriendRequestModal(false);
           // Optionally show success message or close profile modal
         }}
       />
-    </AnimatePresence>
+    </>
   );
 }

@@ -1,38 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Settings,
-  MapPin,
-  Calendar,
-  Shield,
-  Edit,
   Grid3X3,
   List,
   Plus,
+  LogOut,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GlassCard } from './ui/GlassCard';
-import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { useProfile } from '../hooks/useProfile';
 import { useAuth } from '../hooks/useAuth';
 import { useFollows } from '../hooks/useFollows';
 import { toast } from 'sonner';
-import { useContent } from '../hooks/useContent';
-import { AvatarUploader } from './AvatarUploader';
+import { useContent, ContentItem } from '../hooks/useContent';
 import { ProfileCard } from './ProfileCard';
 import { supabase } from '../lib/supabase';
-import { CreateContentModal } from './CreateContentModal';
 import { useProjects } from '../hooks/useProjects';
 import { EditProfileModal } from './EditProfileModal';
-
-type ContentItem = {
-  id: string;
-  title: string;
-  content_type: string;
-  external_url: string | null;
-  thumbnail_url?: string | null;
-  // Add other necessary fields from your content items
-};
 
 const VideoPlayer: React.FC<{
   src: string | null;
@@ -109,7 +93,7 @@ export function ProfileTab() {
   const { user } = useAuth();
   const [contentViewMode, setContentViewMode] = useState<ViewMode>('grid');
   const [activeSection, setActiveSection] = useState<'content' | 'projects'>('content');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const [lightboxContent, setLightboxContent] = useState<LightboxContent | null>(null);
@@ -134,17 +118,13 @@ export function ProfileTab() {
 
   // Fetch user's content
   const {
-    content: allContent,
+    content: userContent,
     loading: contentLoading,
     error: contentError,
-    refetch: refetchContent,
-  } = useContent({});
-
-  // Filter content to only show current user's content
-  const userContent = allContent.filter(item => item.creator_id === user?.id);
+  } = useContent({ creator_id: user?.id });
 
   // Filter only media content for the lightbox
-  const mediaContent = (userContent || []).filter((item: ContentItem): item is ContentItem & { content_type: 'video' | 'image' } => 
+  const mediaContent = (userContent || []).filter((item: ContentItem): item is ContentItem & { content_type: 'video' | 'image' } =>
     (item.content_type === 'video' || item.content_type === 'image') && !!item.external_url
   );
 
@@ -310,7 +290,15 @@ export function ProfileTab() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleCreateContent = () => setShowCreateModal(true);
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  };
 
   // Update handleCreateContent to handle both content and projects
   const handleCreate = () => {
@@ -323,10 +311,7 @@ export function ProfileTab() {
     }
   };
 
-  const handleContentCreated = () => {
-    setShowCreateModal(false);
-    refetchContent();
-  };
+  // Content creation handled by CreateContentModal
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -568,7 +553,7 @@ export function ProfileTab() {
                   </div>
                 )}
                 <Button
-                  onClick={handleCreateContent}
+                  onClick={handleCreate}
                   variant="primary"
                   className="bg-gradient-to-r from-purple-600 to-pink-600"
                 >
@@ -725,11 +710,9 @@ export function ProfileTab() {
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                         
-                        {/* Project Type Badge */}
-                        <div className="absolute top-3 right-3">
-                          <Badge className="bg-black/50 text-white border-white/20 backdrop-blur-sm">
-                            {project.collab_type}
-                          </Badge>
+                        {/* Project Type */}
+                        <div className="absolute top-3 right-3 text-xs font-medium px-2 py-1 rounded-full bg-black/50 text-white border border-white/20 backdrop-blur-sm">
+                          {project.collab_type}
                         </div>
                       </div>
 
@@ -743,14 +726,14 @@ export function ProfileTab() {
                           <p className="text-xs text-gray-400 mb-1">Looking for:</p>
                           <div className="flex flex-wrap gap-1">
                             {project.roles_needed.slice(0, 3).map((role) => (
-                              <Badge key={role} className="bg-purple-900/30 text-purple-200 border-purple-700/50 text-xs">
+                              <span key={role} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-900/30 text-purple-200 border border-purple-700/50">
                                 {role}
-                              </Badge>
+                              </span>
                             ))}
                             {project.roles_needed.length > 3 && (
-                              <Badge className="bg-purple-900/30 text-purple-200 border-purple-700/50 text-xs">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-900/30 text-purple-200 border border-purple-700/50">
                                 +{project.roles_needed.length - 3}
-                              </Badge>
+                              </span>
                             )}
                           </div>
                         </div>
@@ -769,15 +752,21 @@ export function ProfileTab() {
               )
             )}
           </div>
+          
+          {/* Logout Button */}
+          <div className="mt-8 mb-12 flex justify-center">
+            <motion.button
+              onClick={handleLogout}
+              className="px-6 py-3 rounded-full bg-gradient-to-r from-red-600/80 to-red-700/80 backdrop-blur-md border border-red-500/30 text-white hover:from-red-700 hover:to-red-800 transition-all shadow-lg flex items-center gap-2 font-medium"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </motion.button>
+          </div>
         </motion.div>
-      
-        {/* Create Content Modal */}
-        <CreateContentModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onContentCreated={handleContentCreated}
-        />
-        
         {/* Edit Profile Modal */}
         <EditProfileModal
           isOpen={showEditModal}
@@ -869,6 +858,7 @@ export function ProfileTab() {
             </div>
           </motion.div>
         )}
+        
       </div>
     </div>
   );

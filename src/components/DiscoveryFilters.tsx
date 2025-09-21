@@ -37,7 +37,8 @@ export function DiscoveryFilters({ filters, onFiltersChange, userCount, totalCou
   }
 
   const clearFilters = () => {
-    onFiltersChange({})
+    // Pass an empty object to trigger the includePassed logic in useUserDiscovery
+    onFiltersChange({} as any)
   }
 
   const activeFilterCount = Object.values(filters).filter(value =>

@@ -1,13 +1,14 @@
-import React, { useState } from 'react'
-import { Heart, X, MapPin, Sparkles, Users, Calendar, Loader2, Filter, ChevronDown } from 'lucide-react'
+import React, { useState, useCallback } from 'react'
+import { Heart, X, MapPin, Users, Calendar, Loader2, Filter, ChevronDown } from 'lucide-react'
+import { ImmersiveProfileCard } from './ImmersiveProfileCard'
 import { Badge } from './ui/Badge'
 import { Button } from './ui/Button'
 import { useUserDiscovery } from '../hooks/useUserDiscovery'
 import { DiscoveryFilters as DiscoveryFiltersComponent } from './DiscoveryFilters'
 import { formatDate, getInitials } from '../lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useContent } from '../hooks/useContent'
-import { UserProfileModal } from './UserProfileModal'
+import { useContent, ContentItem } from '../hooks/useContent'
+import { UserProfileModal } from './UserProfileModal.clean'
 
 export function DiscoverTab() {
   const { users, allUsers, filters, loading, error, liking, likeUser, passUser, updateFilters } = useUserDiscovery()
@@ -22,7 +23,30 @@ export function DiscoverTab() {
   const currentUser = users[currentIndex]
   
   // Fetch content for the current user
-  const { content: userContent } = useContent(currentUser ? { creator_id: currentUser.id } : undefined)
+  const { content: userContent = [] } = useContent(currentUser ? { creator_id: currentUser.id } : undefined)
+  
+  // Format content for ImmersiveProfileCard
+  const formatContent = useCallback((content: any[]) => {
+    return content.map(item => ({
+      id: item.id,
+      type: item.content_type === 'video' ? 'video' : 'image',
+      url: item.external_url || item.media_url || '',
+      thumbnail: item.thumbnail_url
+    }));
+  }, []);
+  
+  // Format user data for ImmersiveProfileCard
+  const formatUser = useCallback((user: any) => ({
+    id: user.id,
+    username: user.username,
+    fullName: user.full_name,
+    bio: user.bio || user.tagline,
+    location: user.location,
+    createdAt: user.created_at,
+    avatarUrl: user.avatar_url,
+    tags: [...(user.roles || []), ...(user.skills || []), ...(user.looking_for || [])],
+    content: formatContent(userContent)
+  }), [userContent, formatContent]);
 
   React.useEffect(() => {
     setCurrentIndex(0)
@@ -157,13 +181,23 @@ export function DiscoverTab() {
     return (
       <>
         <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900 flex items-center justify-center p-4">
-          {/* Filter Button */}
-          <button
-            onClick={() => setShowFilters(true)}
-            className="fixed top-6 right-6 z-50 p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white hover:bg-white/10 transition-all"
-          >
-            <Filter className="w-5 h-5" />
-          </button>
+          {/* Enhanced Header for No Users State */}
+          <div className="fixed top-0 left-0 right-0 z-[60] p-4">
+            <div className="flex justify-end max-w-6xl mx-auto">
+              <button
+                onClick={() => setShowFilters(true)}
+                className="relative px-4 py-2 rounded-full bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md border border-purple-400/30 text-white hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg flex items-center gap-2 font-medium mr-16"
+              >
+                <Filter className="w-4 h-4" />
+                Filters
+                {Object.keys(filters).length > 0 && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-md">
+                    <span className="text-xs text-white font-bold">{Object.keys(filters).length}</span>
+                  </div>
+                )}
+              </button>
+            </div>
+          </div>
 
           <div className="text-center max-w-md">
             <div className="text-7xl mb-6 transform hover:scale-110 transition-transform duration-300">
@@ -260,22 +294,32 @@ export function DiscoverTab() {
         transition={{ duration: 80, repeat: Infinity, ease: 'linear' }}
       />
 
-      {/* Filter Button */}
-      <button
-        onClick={() => setShowFilters(true)}
-        className="fixed top-6 right-6 z-50 p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white hover:bg-white/10 transition-all shadow-lg"
-      >
-        <Filter className="w-5 h-5" />
-        {Object.keys(filters).length > 0 && (
-          <div className="absolute -top-1 -right-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
-            <span className="text-xs text-white font-bold">{Object.keys(filters).length}</span>
+      {/* Enhanced Header with Better Filter Integration */}
+      <div className="fixed top-0 left-0 right-0 z-[60] p-4">
+        <div className="flex justify-between items-center max-w-6xl mx-auto">
+          {/* User Counter */}
+          <div className="px-4 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white text-sm">
+            {currentIndex + 1} of {users.length}
           </div>
-        )}
-      </button>
-
-      {/* User Counter */}
-      <div className="fixed top-6 left-6 z-50 px-4 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white text-sm">
-        {currentIndex + 1} of {users.length}
+          
+          {/* Spacer to avoid HeaderNotifications overlap */}
+          <div className="flex-1" />
+          
+          {/* Filter Button - Positioned to avoid HeaderNotifications */}
+          <button
+            onClick={() => setShowFilters(true)}
+            className="relative px-4 py-2 rounded-full bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-md border border-purple-400/30 text-white hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg flex items-center gap-2 font-medium mr-16"
+            aria-label="Filters"
+          >
+            <Filter className="w-4 h-4" />
+            Filters
+            {Object.keys(filters).length > 0 && (
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-md">
+                <span className="text-xs text-white font-bold">{Object.keys(filters).length}</span>
+              </div>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Main Card Container */}
@@ -306,8 +350,6 @@ export function DiscoverTab() {
           {/* User Card */}
           <div 
             className={`w-full h-full rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900/90 to-gray-900/70 backdrop-blur-xl border border-white/10 shadow-2xl cursor-grab active:cursor-grabbing select-none ${swipeDirection ? 'opacity-0' : ''}`}
-            onClick={() => setShowUserProfile(true)}
-            onClick={() => setShowUserProfile(true)}
           >
             {/* Content Slider Background */}
             <div className="relative w-full h-full">
@@ -315,7 +357,7 @@ export function DiscoverTab() {
                 <div className="w-full h-full">
                   {/* Content slides */}
                   <div className="relative w-full h-full overflow-hidden">
-                    {userContent.slice(0, 3).map((content, index) => (
+                    {userContent.slice(0, 3).map((content: ContentItem, index: number) => (
                       <div
                         key={content.id}
                         className="absolute inset-0 w-full h-full"
@@ -324,27 +366,33 @@ export function DiscoverTab() {
                           transition: 'transform 0.5s ease-in-out'
                         }}
                       >
-                        {content.content_type === 'video' && content.external_url ? (
+                        {content.content_type === 'video' && (content.media_url || content.external_url) ? (
                           <video
-                            src={content.external_url}
+                            src={(content.media_url || content.external_url) ?? ''}
                             className="w-full h-full object-cover"
                             autoPlay
                             muted
                             loop
                             playsInline
+                            controls={false}
                           />
-                        ) : content.thumbnail_url ? (
+                        ) : (content.thumbnail_url || content.media_url) ? (
                           <img
-                            src={content.thumbnail_url}
-                            alt={content.title}
+                            src={(content.thumbnail_url || content.media_url) ?? ''}
+                            alt={content.title || 'Content image'}
                             className="w-full h-full object-cover"
                             draggable={false}
+                            onError={(e) => {
+                              // Fallback to placeholder if image fails to load
+                              const target = e.target as HTMLImageElement;
+                              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(content.title || 'U')}&background=random`;
+                              target.className = 'w-full h-full object-cover bg-gray-800';
+                            }}
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-purple-600/60 to-pink-600/60 flex items-center justify-center">
                             <span className="text-8xl text-white/20">
-                              {content.content_type === 'video' ? '🎥' : 
-                               content.content_type === 'image' ? '📸' : 
+                              {content.content_type === 'image' ? '📸' : 
                                content.content_type === 'audio' ? '🎵' : '📝'}
                             </span>
                           </div>
@@ -389,7 +437,7 @@ export function DiscoverTab() {
               )}
 
               {/* User Info Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 z-10 pointer-events-none">
+              <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
                 {/* Name and username */}
                 <div className="mb-4">
                   <h3 className="text-3xl font-bold text-white drop-shadow-lg">{currentUser.full_name}</h3>
@@ -430,14 +478,22 @@ export function DiscoverTab() {
                   )}
                 </div>
 
-                {/* Integrated Action Buttons */}
-                <div className="flex gap-4 justify-center pointer-events-auto">
+                {/* Profile Button */}
+                <div className="flex justify-center mb-4">
                   <motion.button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      e.stopPropagation()
-                      handlePass()
-                    }}
+                    onClick={() => setShowUserProfile(true)}
+                    className="px-6 py-2 bg-white/10 backdrop-blur-md text-white rounded-full border border-white/20 hover:bg-white/20 transition-colors"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Show Full Profile
+                  </motion.button>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-4 justify-center">
+                  <motion.button
+                    onClick={handlePass}
                     disabled={liking || swipeDirection !== null}
                     className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500/90 to-red-600/90 backdrop-blur-md border border-red-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
                     whileHover={{ scale: 1.1 }}
@@ -447,11 +503,7 @@ export function DiscoverTab() {
                   </motion.button>
                   
                   <motion.button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      e.stopPropagation()
-                      handleLike()
-                    }}
+                    onClick={handleLike}
                     disabled={liking || swipeDirection !== null}
                     className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500/90 to-purple-600/90 backdrop-blur-md border border-pink-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
                     whileHover={{ scale: 1.1 }}
@@ -470,27 +522,28 @@ export function DiscoverTab() {
         </motion.div>
       </div>
 
-      {/* User Profile Modal */}
-      <AnimatePresence>
-        {showUserProfile && currentUser && (
-          <UserProfileModal
-            isOpen={showUserProfile}
-            onClose={() => setShowUserProfile(false)}
-            user={currentUser}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Swipe hint */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 text-center text-xs text-gray-400 z-50">
         Swipe or use buttons • ← Pass • Like →
       </div>
 
-      {/* Filters Slide-out */}
+      {/* Combined AnimatePresence for all animations */}
       <AnimatePresence>
+        {/* User Profile Modal */}
+        {showUserProfile && currentUser && (
+          <UserProfileModal
+            key="user-profile-modal"
+            isOpen={showUserProfile}
+            onClose={() => setShowUserProfile(false)}
+            user={currentUser}
+          />
+        )}
+
+        {/* Filters Slide-out */}
         {showFilters && (
           <>
             <motion.div
+              key="filters-overlay"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -498,6 +551,7 @@ export function DiscoverTab() {
               onClick={() => setShowFilters(false)}
             />
             <motion.div
+              key="filters-panel"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
@@ -525,9 +579,10 @@ export function DiscoverTab() {
                 />
               </div>
             </motion.div>
-            {/* Integrated Action Buttons */}
+            {/* Action Buttons */}
             <div className="flex gap-4 justify-center">
               <motion.button
+                key="pass-button"
                 onClick={handlePass}
                 disabled={liking || swipeDirection !== null}
                 className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500/90 to-red-600/90 backdrop-blur-md border border-red-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
@@ -538,6 +593,7 @@ export function DiscoverTab() {
               </motion.button>
               
               <motion.button
+                key="like-button"
                 onClick={handleLike}
                 disabled={liking || swipeDirection !== null}
                 className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500/90 to-purple-600/90 backdrop-blur-md border border-pink-400/30 shadow-xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all disabled:opacity-50"
