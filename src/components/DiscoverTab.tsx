@@ -29,55 +29,12 @@ export function DiscoverTab() {
 
   const currentUser = users[currentIndex]
 
-  // Auto-swipe functionality
-  const startAutoSwipe = useCallback(() => {
-    // Clear any existing timer
-    if (autoSwipeTimer.current) {
-      clearTimeout(autoSwipeTimer.current)
-    }
-    
-    // Only set timer if not hovering and there are users left
-    if (!isHovering && currentIndex < users.length - 1) {
-      autoSwipeTimer.current = setTimeout(() => {
-        handlePass()
-      }, 10000) // 10 seconds
-    }
-  }, [currentIndex, users.length, isHovering])
 
   // Reset timer on user interaction
-  const resetAutoSwipe = useCallback(() => {
-    if (autoSwipeTimer.current) {
-      clearTimeout(autoSwipeTimer.current)
-    }
-    startAutoSwipe()
-  }, [startAutoSwipe])
-
-  // Start auto-swipe when component mounts or currentIndex changes
-  useEffect(() => {
-    startAutoSwipe()
-    return () => {
-      if (autoSwipeTimer.current) {
-        clearTimeout(autoSwipeTimer.current)
-      }
-    }
-  }, [startAutoSwipe])
+ 
   
   // Reset timer on any user interaction
-  useEffect(() => {
-    const handleInteraction = () => {
-      resetAutoSwipe()
-    }
-    
-    window.addEventListener('mousedown', handleInteraction)
-    window.addEventListener('touchstart', handleInteraction)
-    window.addEventListener('keydown', handleInteraction)
-    
-    return () => {
-      window.removeEventListener('mousedown', handleInteraction)
-      window.removeEventListener('touchstart', handleInteraction)
-      window.removeEventListener('keydown', handleInteraction)
-    }
-  }, [resetAutoSwipe])
+  
   
   // Fetch content for the current user
   const { content: userContent = [] } = useContent(currentUser ? { creator_id: currentUser.id } : undefined)
@@ -449,9 +406,6 @@ export function DiscoverTab() {
             transform: isDragging ? `translateX(${dragOffset.x}px) translateY(${dragOffset.y * 0.1}px) rotate(${dragOffset.x * 0.1}deg)` : undefined,
             transition: isDragging ? 'none' : 'all 0.3s ease-out',
           }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
           onMouseDown={(e) => {
             handleMouseDown(e)
             resetAutoSwipe()

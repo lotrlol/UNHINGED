@@ -394,7 +394,7 @@ const ContentCard = ({
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
-  const { comments, commentCount, loading: commentsLoading, createComment, likeComment, fetchComments } = useContentComments(content.id);
+  const { comments, loading: commentsLoading, createComment, likeComment, fetchComments } = useContentComments(content.id);
   
   // Fetch comments when the comments section is expanded
   useEffect(() => {

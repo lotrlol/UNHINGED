@@ -18,6 +18,16 @@ import { supabase } from '../lib/supabase';
 import { useProjects } from '../hooks/useProjects';
 import { EditProfileModal } from './EditProfileModal';
 import { CreateContentModal } from './CreateContentModal';
+import { AddLinksModal } from './AddLinksModal';
+import { Link as LinkIcon, Plus as PlusIcon } from 'lucide-react';
+
+interface UserLink {
+  id: string;
+  title: string;
+  url: string;
+  image_url?: string;
+  display_order: number;
+}
 
 const VideoPlayer: React.FC<{
   src: string | null;
@@ -90,6 +100,9 @@ type LightboxContent = {
 export function ProfileTab() {
   const { profile, loading, error, uploadFile } = useProfile();
   const { stats: followStats } = useFollows();
+  const [showLinksModal, setShowLinksModal] = useState(false);
+  const [userLinks, setUserLinks] = useState<UserLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(true);
   const [profileState, setProfileState] = useState(profile);
   const { user } = useAuth();
   const [contentViewMode, setContentViewMode] = useState<ViewMode>('grid');
@@ -104,10 +117,45 @@ export function ProfileTab() {
   const [[x, y], setXY] = useState([0, 0]);
   const [uploading, setUploading] = useState(false);
 
-
   // Fetch user's projects
   const { projects: allProjects, loading: projectsLoading } = useProjects();
   const userProjects = allProjects.filter(project => project.creator_id === user?.id);
+
+  // Update profile state when profile changes
+  useEffect(() => {
+    if (profile) {
+      setProfileState(profile);
+      // Fetch user links when profile is available
+      fetchUserLinks();
+    }
+  }, [profile]);
+
+  // Fetch user links
+  const fetchUserLinks = async () => {
+    if (!user) return;
+    
+    setLinksLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_links')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('display_order', { ascending: true });
+      
+      if (error) throw error;
+      
+      setUserLinks(data || []);
+    } catch (error) {
+      console.error('Error fetching user links:', error);
+      toast.error('Failed to load links');
+    } finally {
+      setLinksLoading(false);
+    }
+  };
+  
+  const handleLinksUpdated = () => {
+    fetchUserLinks();
+  };
 
   // Sync local state with profile data
   useEffect(() => {
@@ -496,97 +544,160 @@ export function ProfileTab() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="relative"
+          className="relative pt-8"
         >
-          <ProfileCard
-            username={profileState?.username || ''}
-            fullName={profileState?.full_name}
-            avatarUrl={profileState?.avatar_url as string}
-            bannerUrl={(profileState?.banner_url || profileState?.cover_url) as string}
-            location={profileState?.location || undefined}
-            bio={profileState?.tagline || undefined}
-            stats={{
-              posts: userContent?.length || 0,
-              followers: followStats.followers_count,
-              following: followStats.following_count
-            }}
-            onEditProfile={() => setShowEditModal(true)}
-            onBannerChange={handleBannerChange}
-            onAvatarChange={handleAvatarChange}
-            className="w-full"
-            fullScreen={true}
-          />
-        </motion.div>
-
-        {/* Content section integrated with profile */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="relative z-10 mx-4"
-        >
-          {/* Section tabs - positioned above heading */}
-          <div className="flex justify-left mb-4">
-            <div className="flex bg-black/20 rounded-lg p-0.5 backdrop-blur-sm border border-white/5">
-              <button
-                onClick={() => setActiveSection('content')}
-                className={`px-4 py-1.5 rounded-md transition-all text-xs font-medium ${
-                  activeSection === 'content'
-                    ? 'bg-purple-600/30 text-white shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                Content ({userContent.length})
-              </button>
-              <button
-                onClick={() => setActiveSection('projects')}
-                className={`px-4 py-1.5 rounded-md transition-all text-xs font-medium ${
-                  activeSection === 'projects'
-                    ? 'bg-purple-600/30 text-white shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                Projects ({userProjects.length})
-              </button>
-            </div>
-          </div>
-
-          {/* Content header */}
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">
-              {activeSection === 'content' ? 'My Content' : 'My Projects'}
-            </h3>
-            <div className="flex items-center gap-3">
-              {activeSection === 'content' && (
-                <div className="flex bg-black/40 rounded-lg p-1 backdrop-blur-sm border border-white/10">
+          <div className="relative">
+            <ProfileCard
+              username={profileState?.username || ''}
+              fullName={profileState?.full_name || ''}
+              avatarUrl={profileState?.avatar_url}
+              bannerUrl={profileState?.banner_url}
+              bio={profileState?.bio}
+              location={profileState?.location}
+              website={profileState?.website}
+              isCurrentUser={true}
+              onEdit={() => setShowEditModal(true)}
+              onBannerChange={handleBannerChange}
+              onAvatarChange={handleAvatarChange}
+              className="w-full"
+              fullScreen={true}
+              stats={{
+                posts: userContent?.length || 0,
+                followers: followStats?.followers_count || 0,
+                following: followStats?.following_count || 0
+              }}
+            />
+            
+            {/* Links Section */}
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-medium text-white">My Links</h3>
+                <button
+                  onClick={() => setShowLinksModal(true)}
+                  className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                >
+                  <PlusIcon size={16} /> Add Links
+                </button>
+              </div>
+              
+              {linksLoading ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-pulse text-gray-400">Loading links...</div>
+                </div>
+              ) : userLinks.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {userLinks.map((link) => (
+                    <a
+                      key={link.id}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative h-32 rounded-xl overflow-hidden shadow-lg transition-all hover:scale-[1.02]"
+                      style={{
+                        backgroundImage: link.image_url 
+                          ? `linear-gradient(to right, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%), url(${link.image_url})`
+                          : 'linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(99, 102, 241, 0.8) 100%)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        
+                      }}
+                    >
+                      <div className="absolute inset-0 p-5 flex items-center justify-center">
+                        <div className="text-lg font-semibold text-white text-center">{link.title}</div>
+                      </div>
+                      {!link.image_url && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <LinkIcon size={24} className="text-white opacity-70" />
+                        </div>
+                      )}
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 px-4 rounded-lg border-2 border-dashed border-white/10">
+                  <p className="text-gray-400 mb-2">No links added yet</p>
                   <button
-                    onClick={() => setContentViewMode('grid')}
-                    className={`p-2 rounded-md transition-all ${
-                      contentViewMode === 'grid' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
-                    }`}
+                    onClick={() => setShowLinksModal(true)}
+                    className="text-sm text-purple-400 hover:text-purple-300 flex items-center justify-center gap-1 mx-auto"
                   >
-                    <Grid3X3 size={18} />
-                  </button>
-                  <button
-                    onClick={() => setContentViewMode('list')}
-                    className={`p-2 rounded-md transition-all ${
-                      contentViewMode === 'list' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <List size={18} />
+                    <PlusIcon size={14} /> Add your first link
                   </button>
                 </div>
               )}
-              <Button
-                onClick={handleCreate}
-                variant="primary"
-                className="bg-gradient-to-r from-purple-600 to-pink-600"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                {activeSection === 'content' ? 'Create' : 'New Project'}
-              </Button>
             </div>
+        
           </div>
+
+          {/* Content section integrated with profile */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="relative z-10 mx-4"
+          >
+            {/* Section tabs - positioned above heading */}
+            <div className="flex justify-left mb-4 pt-5">
+              <div className="flex bg-black/20 rounded-lg p-0.5 backdrop-blur-sm border border-white/5">
+                <button
+                  onClick={() => setActiveSection('content')}
+                  className={`px-4 py-1.5 rounded-md transition-all text-xs font-medium ${
+                    activeSection === 'content'
+                      ? 'bg-purple-600/30 text-white shadow-sm'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Content ({userContent.length})
+                </button>
+                <button
+                  onClick={() => setActiveSection('projects')}
+                  className={`px-4 py-1.5 rounded-md transition-all text-xs font-medium ${
+                    activeSection === 'projects'
+                      ? 'bg-purple-600/30 text-white shadow-sm'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Projects ({userProjects.length})
+                </button>
+              </div>
+            </div>
+
+            {/* Content header */}
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">
+                {activeSection === 'content' ? 'My Content' : 'My Projects'}
+              </h3>
+              <div className="flex items-center gap-3">
+                {activeSection === 'content' && (
+                  <div className="flex bg-black/40 rounded-lg p-1 backdrop-blur-sm border border-white/10">
+                    <button
+                      onClick={() => setContentViewMode('grid')}
+                      className={`p-2 rounded-md transition-all ${
+                        contentViewMode === 'grid' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Grid3X3 size={18} />
+                    </button>
+                    <button
+                      onClick={() => setContentViewMode('list')}
+                      className={`p-2 rounded-md transition-all ${
+                        contentViewMode === 'list' ? 'bg-purple-600/50 text-white' : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <List size={18} />
+                    </button>
+                  </div>
+                )}
+                <Button
+                  onClick={handleCreate}
+                  variant="primary"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {activeSection === 'content' ? 'Create' : 'New Project'}
+                </Button>
+              </div>
+            </div>
 
             {(activeSection === 'content' ? contentLoading : projectsLoading) ? (
               <div className="flex items-center justify-center py-12">
@@ -793,6 +904,7 @@ export function ProfileTab() {
             </motion.button>
           </div>
         </motion.div>
+        </motion.div>
         
         {/* Create Content/Project Modal */}
         <CreateContentModal
@@ -806,6 +918,13 @@ export function ProfileTab() {
               // Refresh projects if needed
             }
           }}
+        />
+        
+        {/* Links Management Modal */}
+        <AddLinksModal
+          isOpen={showLinksModal}
+          onClose={() => setShowLinksModal(false)}
+          onLinksUpdated={handleLinksUpdated}
         />
         
         {/* Edit Profile Modal */}
@@ -902,8 +1021,7 @@ export function ProfileTab() {
         
       </div>
     </div>
-    );
-  
+  );
 }
 
 // Helper function to format dates
