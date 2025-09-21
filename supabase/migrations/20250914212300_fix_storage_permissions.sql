@@ -14,7 +14,9 @@ BEGIN
     storage.filename(path) = (user_id::text || '.jpeg') OR
     storage.filename(path) = (user_id::text || '.png') OR
     storage.filename(path) = (user_id::text || '.webp') OR
-    storage.filename(path) = (user_id::text || '.gif')
+    storage.filename(path) = (user_id::text || '.gif') OR
+    -- Allow files in subdirectories that start with user ID (for link images)
+    path LIKE (user_id::text || '/%')
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -94,7 +94,7 @@ export function AddLinksModal({ isOpen, onClose, onLinksUpdated }: AddLinksModal
       const fileName = `${user.id}/${linkId}/link-image-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from('user-links')
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false
@@ -103,21 +103,32 @@ export function AddLinksModal({ isOpen, onClose, onLinksUpdated }: AddLinksModal
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage
-        .from('avatars')
+        .from('user-links')
         .getPublicUrl(fileName);
 
-      // Update the link with the image URL
-      await (supabase as any)
-        .from('user_links')
-        .update({ image_url: data.publicUrl })
-        .eq('id', linkId);
+      // Check if this is a temporary link (not yet saved to database)
+      const isTemporaryLink = linkId.startsWith('temp-');
 
-      // Update local state
-      setLinks(prev => prev.map(link =>
-        link.id === linkId ? { ...link, image_url: data.publicUrl } : link
-      ));
+      if (isTemporaryLink) {
+        // Only update local state for temporary links
+        setLinks(prev => prev.map(link =>
+          link.id === linkId ? { ...link, image_url: data.publicUrl } : link
+        ));
+        toast.success('Link image uploaded successfully');
+      } else {
+        // Update database for existing links
+        await (supabase as any)
+          .from('user_links')
+          .update({ image_url: data.publicUrl })
+          .eq('id', linkId);
 
-      toast.success('Link image uploaded successfully');
+        // Update local state
+        setLinks(prev => prev.map(link =>
+          link.id === linkId ? { ...link, image_url: data.publicUrl } : link
+        ));
+
+        toast.success('Link image uploaded successfully');
+      }
     } catch (error) {
       console.error('Error uploading image:', error);
       toast.error('Failed to upload image');
@@ -127,6 +138,7 @@ export function AddLinksModal({ isOpen, onClose, onLinksUpdated }: AddLinksModal
   };
 
   const addNewLink = () => {
+    console.log('🔗 AddNewLink clicked - user:', user ? 'authenticated' : 'not authenticated');
     const newLink: UserLink = {
       id: `temp-${Date.now()}`,
       title: '',
@@ -134,7 +146,14 @@ export function AddLinksModal({ isOpen, onClose, onLinksUpdated }: AddLinksModal
       image_url: undefined,
       display_order: 0
     };
-    setLinks(prev => [newLink, ...prev.map(link => ({ ...link, display_order: link.display_order + 1 }))]);
+    setLinks(prev => {
+      const updatedLinks = prev.map((link, index) => ({
+        ...link,
+        display_order: index + 1
+      }));
+      return [newLink, ...updatedLinks];
+    });
+    console.log('✅ New link added successfully');
   };
 
   const updateLink = (id: string, updates: Partial<UserLink>) => {
@@ -144,7 +163,13 @@ export function AddLinksModal({ isOpen, onClose, onLinksUpdated }: AddLinksModal
   };
 
   const removeLink = (id: string) => {
-    setLinks(prev => prev.filter(link => link.id !== id));
+    setLinks(prev => {
+      const filteredLinks = prev.filter(link => link.id !== id);
+      return filteredLinks.map((link, index) => ({
+        ...link,
+        display_order: index
+      }));
+    });
   };
 
   const moveLink = (index: number, direction: 'up' | 'down') => {
@@ -154,7 +179,11 @@ export function AddLinksModal({ isOpen, onClose, onLinksUpdated }: AddLinksModal
     setLinks(prev => {
       const newLinks = [...prev];
       [newLinks[index], newLinks[newIndex]] = [newLinks[newIndex], newLinks[index]];
-      return newLinks;
+      // Reassign display_order after moving
+      return newLinks.map((link, idx) => ({
+        ...link,
+        display_order: idx
+      }));
     });
   };
 
@@ -259,10 +288,16 @@ export function AddLinksModal({ isOpen, onClose, onLinksUpdated }: AddLinksModal
             ) : (
               <>
                 {/* Add new link button (mobile = sticky) */}
-                <div className="sm:static sticky top-16 z-10 py-2">
+                <div className="sm:static sticky top-16 z-20 py-2" style={{ zIndex: 25 }}>
                   <button
-                    onClick={addNewLink}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600/40 to-pink-600/40 hover:from-purple-600/60 hover:to-pink-600/60 text-white transition-all border border-purple-500/30"
+                    onClick={(e) => {
+                      console.log('🔗 Button clicked!', { user: !!user, loading, isOpen });
+                      e.preventDefault();
+                      addNewLink();
+                    }}
+                    disabled={!user || loading}
+                    className="relative w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600/40 to-pink-600/40 hover:from-purple-600/60 hover:to-pink-600/60 text-white transition-all border border-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-purple-600/40 disabled:hover:to-pink-600/40"
+                    style={{ pointerEvents: 'auto', zIndex: 30 }}
                   >
                     <Plus className="w-4 h-4" />
                     Add New Link
