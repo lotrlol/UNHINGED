@@ -247,8 +247,8 @@ export function ChatModal({ isOpen, onClose, chatId }: ChatModalProps) {
           ) : messages.length === 0 ? (
             <div className="text-center py-12 lg:py-20">
               <div className="text-4xl mb-4">💬</div>
-              <h3 className="font-medium text-gray-900 mb-2 text-lg lg:text-xl">Start the conversation!</h3>
-              <p className="text-gray-600 text-gray-900 max-w-md mx-auto">
+              <h3 className="font-medium text-white mb-2 text-lg lg:text-xl">Start the conversation!</h3>
+              <p className="text-gray-300 max-w-md mx-auto">
                 Say hello and discuss your collaboration ideas.
               </p>
             </div>
