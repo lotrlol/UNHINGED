@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { UserProfileModal } from './UserProfileModal';
-import { getInitials } from '../lib/utils';
+import { getInitials, processUserUrls } from '../lib/utils';
 import { Skeleton } from './ui/Skeleton';
 import { Heart } from 'lucide-react';
 
@@ -63,7 +63,9 @@ export const LikedProfilesList = () => {
           
         if (usersError) throw usersError;
         
-        setProfiles(users || []);
+        // Process URLs for each user before setting profiles
+        const processedUsers = (users || []).map(user => processUserUrls(user));
+        setProfiles(processedUsers);
       } catch (error) {
         console.error('Error fetching liked profiles:', error);
       } finally {

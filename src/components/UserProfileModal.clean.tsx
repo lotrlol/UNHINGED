@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react';
-import { X, MessageCircle, Grid3X3, List, Play, Heart, Eye, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
+import { X, MessageCircle, Grid3X3, List, Play, Heart, Eye, ChevronLeft, ChevronRight, UserPlus, Link2 } from 'lucide-react';
 import { Button } from './ui/Button';
-import { getInitials } from '../lib/utils';
+import { getInitials, getPublicUrl } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFollows } from '../hooks/useFollows';
 import { useAuth } from '../hooks/useAuth';
 import { useUserContent } from '../hooks/useUserContent';
 import { SendFriendRequestModal } from './SendFriendRequestModal';
 import { Badge } from './ui/Badge';
+import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
+
+interface UserLink {
+  id: string;
+  title: string;
+  url: string;
+  image_url?: string | null;
+  display_order: number;
+}
 
 interface ContentItem {
   id: string;
@@ -69,18 +79,47 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     setShowFriendRequestModal(false);
   };
   
-  // Fetch user content
-  const { content: userContent, loading: contentLoading } = useUserContent(user?.id);
-  
-  // Ensure we have a valid user ID before making the request
+  const [userLinks, setUserLinks] = useState<UserLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(true);
+
+  // Fetch user links
+  const fetchUserLinks = async (userId: string) => {
+    setLinksLoading(true);
+    console.log('UserProfileModal - Fetching links for user:', userId);
+
+    try {
+      const { data, error } = await supabase
+        .from('user_links')
+        .select('*')
+        .eq('user_id', userId)
+        .order('display_order', { ascending: true });
+
+      if (error) {
+        console.error('UserProfileModal - Error fetching user links:', error);
+        throw error;
+      }
+
+      console.log('UserProfileModal - Fetched links data:', data);
+      setUserLinks(data || []);
+    } catch (error) {
+      console.error('UserProfileModal - Error fetching user links:', error);
+      toast.error('Failed to load links');
+    } finally {
+      setLinksLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user?.id) {
-      console.log('Fetching content for user:', user.id);
+      fetchUserLinks(user.id);
     }
   }, [user?.id]);
   
   // Fetch follow data
   const { stats, actionLoading, toggleFollow } = useFollows(user?.id);
+
+  // Fetch user content
+  const { content: userContent, loading: contentLoading } = useUserContent(user?.id);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -207,6 +246,22 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
     return null;
   };
 
+  // Debug logging to check URL values
+  useEffect(() => {
+    if (user) {
+      console.log('UserProfileModal - User data:', {
+        id: user.id,
+        username: user.username,
+        full_name: user.full_name,
+        avatar_url: user.avatar_url,
+        cover_url: user.cover_url,
+        banner_url: user.banner_url,
+        hasCover: !!(user.cover_url || user.banner_url),
+        coverUrl: user.cover_url || user.banner_url || 'none'
+      });
+    }
+  }, [user]);
+
   if (!isOpen || !user) return null;
 
   return (
@@ -241,15 +296,73 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
           <div className="relative">
             {/* Cover Background */}
             <div className="h-48 relative overflow-hidden rounded-xl mb-6">
-              {(user.cover_url || user.banner_url) ? (
-                <img
-                  src={user.cover_url || user.banner_url || ''}
-                  alt="Cover"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-purple-600/40 to-pink-600/40" />
-              )}
+              {(() => {
+                // Determine which URL to use (prefer cover_url, fall back to banner_url)
+                const coverUrl = user.cover_url || user.banner_url;
+                
+                // For the user's own profile, we might need to handle the URL differently
+                const isOwnProfile = isCurrentUser;
+                const bucket = coverUrl?.includes('banners') ? 'banners' : 'avatars';
+                
+                // Process the URL through getPublicUrl if it exists
+                const processedUrl = coverUrl ? getPublicUrl(coverUrl, bucket) : null;
+                
+                console.log('UserProfileModal - Cover URL check:', {
+                  isOwnProfile,
+                  raw_cover_url: user.cover_url,
+                  raw_banner_url: user.banner_url,
+                  selected_url: coverUrl,
+                  bucket,
+                  processed_url: processedUrl,
+                  has_url: !!coverUrl
+                });
+
+                if (processedUrl) {
+                  return (
+                    <img
+                      src={processedUrl}
+                      alt="Cover"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('UserProfileModal - Cover image failed to load:', {
+                          isOwnProfile,
+                          originalUrl: coverUrl,
+                          processedUrl,
+                          bucket,
+                          error: 'Image load error'
+                        });
+                        // Fallback to gradient
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const fallback = document.createElement('div');
+                          fallback.className = 'w-full h-full bg-gradient-to-br from-purple-600/40 to-pink-600/40';
+                          parent.appendChild(fallback);
+                        }
+                      }}
+                      onLoad={() => {
+                        console.log('UserProfileModal - Cover image loaded successfully:', {
+                          isOwnProfile,
+                          originalUrl: coverUrl,
+                          processedUrl,
+                          bucket
+                        });
+                      }}
+                    />
+                  );
+                } else {
+                  console.log('UserProfileModal - No valid cover URL available, showing gradient fallback', {
+                    isOwnProfile,
+                    raw_cover_url: user.cover_url,
+                    raw_banner_url: user.banner_url,
+                    processed_url: processedUrl
+                  });
+                  return (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-600/40 to-pink-600/40" />
+                  );
+                }
+              })()}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             </div>
 
@@ -323,6 +436,73 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                   </Button>
                 )}
               </div>
+            </div>
+
+            {/* User Links Section */}
+            <div className="mt-6 mb-6">
+
+              {linksLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                </div>
+              ) : userLinks.length > 0 ? (
+                <div className="space-y-3 sm:space-y-4">
+                  {userLinks.map((link) => {
+                    return (
+                        <a
+                        key={link.id}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative overflow-hidden rounded-2xl transition-all transform hover:-translate-y-1 hover:shadow-2xl flex items-center justify-center"
+                        style={{
+                          backgroundImage: link.image_url
+                            ? `url(${link.image_url})`
+                            : 'linear-gradient(135deg, rgba(225, 60, 189, 0.6), rgba(139, 92, 246, 0.6))',
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          backgroundRepeat: 'no-repeat',
+                          minHeight: '140px',
+                          width: '100%',
+                          maxWidth: '100%',
+                        }}
+                      >
+                        {/* Glass overlay */}
+                        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm  rounded-xl shadow-inner" />
+                      
+                        {/* Luxury gradient glow edge */}
+                        <div
+                          className="absolute inset-0 rounded-2xl pointer-events-none opacity-60 group-hover:opacity-90 transition-opacity duration-500"
+                          style={{
+                            background:
+                              "linear-gradient(120deg, rgba(225,60,189,0.4), rgba(99,102,241,0.3), rgba(255,255,255,0.1))",
+                            mixBlendMode: "overlay",
+                          }}
+                        />
+                      
+                        {/* Content */}
+                        <div className="relative z-10 px-4 text-center w-full">
+                          <p
+  className="relative inline-block font-extrabold text-3xl sm:text-4xl tracking-wide truncate
+             text-transparent bg-clip-text 
+             bg-gradient-to-r from-white via-white/90 to-white/70
+             drop-shadow-[0_2px_8px_rgba(255,255,255,0.6)]
+             bg-[length:200%_auto] animate-shimmer"
+>
+  {link.title}
+</p>
+
+                        </div>
+                      </a>
+                      
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-sm text-gray-400 border border-dashed border-gray-600 rounded-lg">
+                  No links added yet
+                </div>
+              )}
             </div>
 
             {/* Tags Section */}

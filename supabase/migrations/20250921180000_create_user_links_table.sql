@@ -18,10 +18,11 @@ CREATE INDEX IF NOT EXISTS user_links_display_order_idx ON public.user_links(dis
 ALTER TABLE public.user_links ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for RLS
-CREATE POLICY "Users can view their own links"
+-- Allow public read access to all user links (for viewing other users' profiles)
+CREATE POLICY "Public can view all user links"
   ON public.user_links
   FOR SELECT
-  USING (auth.uid() = user_id);
+  USING (true);
 
 CREATE POLICY "Users can insert their own links"
   ON public.user_links

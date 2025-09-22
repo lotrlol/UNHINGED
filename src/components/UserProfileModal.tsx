@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, MessageCircle, Check, Sparkles, Grid3X3, List, Play, Heart, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, MapPin, Calendar, MessageCircle, Check, Sparkles, Grid3X3, List, Play, Heart, Eye, ChevronLeft, ChevronRight, Link2 } from 'lucide-react';
 import { UserPlus, UserMinus } from 'lucide-react';
 import { Button } from './ui/Button';
 import { getInitials } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFollows } from '../hooks/useFollows';
 import { SendFriendRequestModal } from './SendFriendRequestModal';
-
 import { Badge } from './ui/Badge';
+import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 interface ContentItem {
   id: string;
@@ -19,6 +20,14 @@ interface ContentItem {
   created_at: string;
   like_count?: number;
   view_count?: number;
+}
+
+interface UserLink {
+  id: string;
+  title: string;
+  url: string;
+  image_url?: string | null;
+  display_order: number;
 }
 
 interface UserProfileModalProps {
@@ -48,6 +57,30 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   const [selectedContent, setSelectedContent] = useState<any>(null);
   const [currentContentIndex, setCurrentContentIndex] = useState(0);
   const [showFriendRequestModal, setShowFriendRequestModal] = useState(false);
+  const [userLinks, setUserLinks] = useState<UserLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(true);
+
+  // TEMPORARY: Force some test data to show
+  const testLinks: UserLink[] = [
+    {
+      id: 'test-1',
+      title: 'Website',
+      url: 'https://example.com',
+      display_order: 1
+    },
+    {
+      id: 'test-2',
+      title: 'Twitter',
+      url: 'https://twitter.com/example',
+      display_order: 2
+    },
+    {
+      id: 'test-3',
+      title: 'Instagram',
+      url: 'https://instagram.com/example',
+      display_order: 3
+    }
+  ];
   
   // User content state (temporarily empty until useContent is implemented)
   const userContent: ContentItem[] = [];
@@ -55,6 +88,109 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
   
   // Fetch follow data
   const { stats, actionLoading, toggleFollow } = useFollows(user?.id);
+
+  // Fetch user links
+  const fetchUserLinks = async (userId: string) => {
+    setLinksLoading(true);
+    console.log('UserProfileModal - Fetching links for user:', userId);
+
+    try {
+      const { data, error } = await supabase
+        .from('user_links')
+        .select('*')
+        .eq('user_id', userId)
+        .order('display_order', { ascending: true });
+
+      if (error) {
+        console.error('UserProfileModal - Error fetching user links:', error);
+        throw error;
+      }
+
+      console.log('UserProfileModal - Fetched links data:', data);
+      setUserLinks(data || []);
+    } catch (error) {
+      console.error('UserProfileModal - Error fetching user links:', error);
+      toast.error('Failed to load links');
+    } finally {
+      setLinksLoading(false);
+    }
+  };
+
+  // TEMPORARY: Use test data to force links to show
+  useEffect(() => {
+    console.log('Setting test links data');
+    setUserLinks(testLinks);
+    setLinksLoading(false);
+  }, []);
+
+  // Debug logging for userLinks
+  useEffect(() => {
+    console.log('UserProfileModal - userLinks updated:', userLinks);
+    console.log('UserProfileModal - userLinks length:', userLinks.length);
+    console.log('UserProfileModal - linksLoading:', linksLoading);
+  }, [userLinks, linksLoading]);
+
+  // Debug logging for user prop changes
+  useEffect(() => {
+    console.log('UserProfileModal - user prop changed:', user);
+    console.log('UserProfileModal - user.id:', user?.id);
+  }, [user]);
+
+  // Debug logging for rendering
+  useEffect(() => {
+    console.log('UserProfileModal - Rendering with state:', {
+      userLinks: userLinks.length,
+      linksLoading,
+      userId: user?.id,
+      isOpen
+    });
+  });
+
+  // Log the raw user data for debugging
+  console.log('UserProfileModal - User data:', {
+    id: user?.id,
+    cover_url: user?.cover_url,
+    banner_url: user?.banner_url,
+    isCurrentUser: user?.id === '83c16c96-6fd4-4d24-a1c4-ba2183f6af28' // TEMP: Replace with proper current user check
+  });
+
+  // Determine which URL to use (prefer cover_url, fall back to banner_url)
+  const bannerUrl = user?.cover_url || user?.banner_url;
+
+  let finalBannerUrl = '';
+
+  if (bannerUrl) {
+    // If it's already a full URL, use it directly
+    if (bannerUrl.startsWith('http')) {
+      finalBannerUrl = bannerUrl;
+    }
+    // If it's a path, construct the full URL
+    else {
+      // Extract the file path from the URL if it contains the bucket
+      let filePath = bannerUrl;
+      if (filePath.includes('/banners/')) {
+        filePath = filePath.split('/banners/')[1];
+      } else if (filePath.includes('/avatars/')) {
+        filePath = filePath.split('/avatars/')[1];
+      }
+
+      // Determine the bucket
+      const bucket = bannerUrl.includes('banner') ? 'banners' : 'avatars';
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(filePath);
+
+      finalBannerUrl = publicUrl;
+    }
+  }
+
+  console.log('UserProfileModal - Banner URL:', {
+    originalUrl: bannerUrl,
+    finalUrl: finalBannerUrl,
+    hasUrl: !!bannerUrl
+  });
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -184,11 +320,19 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
               <div className="relative">
                 {/* Cover Background */}
                 <div className="h-48 relative overflow-hidden">
-                  {(user.cover_url || user.banner_url) ? (
+                  {finalBannerUrl ? (
                     <img
-                      src={user.cover_url || user.banner_url || ''}
+                      src={finalBannerUrl}
                       alt="Cover"
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to gradient if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const gradient = document.createElement('div');
+                        gradient.className = 'w-full h-full bg-gradient-to-br from-purple-600/40 to-pink-600/40';
+                        target.parentNode?.insertBefore(gradient, target.nextSibling);
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-purple-600/40 to-pink-600/40" />
@@ -297,9 +441,66 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                       <MessageCircle className="w-5 h-5 mr-2" />
                       Message
                     </Button>
-                  </div>
-                </div>
-              </div>
+
+{/* Quick Stats */}
+<div className="flex items-center gap-4 mb-4 text-sm text-gray-400">
+{user.location && (
+<div className="flex items-center gap-1">
+<MapPin className="w-4 h-4" />
+<span>{user.location}</span>
+{user.is_remote && <span className="text-cyan-400">• Remote</span>}
+</div>
+)}
+<div className="flex items-center gap-1">
+<Calendar className="w-4 h-4" />
+<span>Joined {new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+</div>
+</div>
+
+{/* Follow Stats */}
+<div className="flex items-center gap-6 mb-6 text-sm">
+<div className="text-center">
+<div className="text-white font-semibold">{stats.followers_count}</div>
+<div className="text-gray-400 text-xs">Followers</div>
+</div>
+<div className="text-center">
+<div className="text-white font-semibold">{stats.following_count}</div>
+<div className="text-gray-400 text-xs">Following</div>
+</div>
+{stats.is_followed_by && (
+<div className="text-center">
+<div className="text-cyan-400 text-xs bg-cyan-500/20 px-2 py-1 rounded-full border border-cyan-500/30">
+Follows you
+</div>
+</div>
+)}
+</div>
+
+{/* Action Buttons */}
+<div className="flex gap-3 mb-6">
+<Button
+onClick={() => toggleFollow(user.id)}
+disabled={actionLoading}
+className={`flex-1 py-3 rounded-xl transition-all ${
+stats.is_following
+? 'bg-gray-600/50 hover:bg-gray-600/70 text-white border border-gray-500/30'
+: 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
+}`}
+>
+{actionLoading ? (
+<div className="w-5 h-5 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
+) : stats.is_following ? (
+<>
+<UserMinus className="w-5 h-5 mr-2" />
+Following
+</>
+) : (
+<>
+<UserPlus className="w-5 h-5 mr-2" />
+Follow
+</>
+)}
+</Button>
 
               {/* Tags Section */}
               <div className="px-6 space-y-6">
@@ -357,8 +558,81 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                 )}
               </div>
 
-              {/* Content Section */}
-              <div className="px-6 mt-8">
+                  {/* User Links - Linktree Style */}
+                  <div className="mb-6">
+                    {/* FORCE VISIBLE TEST */}
+                    <div className="p-8 bg-red-500 text-white text-2xl font-bold mb-4">
+                      🚨 LINKS SECTION IS RENDERING! 🚨
+                    </div>
+
+                    <h3 className="text-sm font-medium text-gray-300 mb-3">Links</h3>
+
+                    {/* Debug info - remove this after fixing */}
+                    <div className="mb-2 p-2 bg-yellow-500/20 rounded text-xs text-yellow-300">
+                      DEBUG: linksLoading={linksLoading ? 'true' : 'false'}, userLinks.length={userLinks.length}
+                    </div>
+
+                    {linksLoading ? (
+                      <div className="flex items-center justify-center py-4">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-500"></div>
+                      </div>
+                    ) : userLinks.length > 0 ? (
+                      <div className="space-y-3">
+                        {userLinks.map((link) => {
+                          let domain = '';
+                          try {
+                            domain = new URL(link.url).hostname.replace('www.', '');
+                          } catch (e) {
+                            domain = 'link';
+                          }
+
+                          return (
+                            <a
+                              key={link.id}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block group relative overflow-hidden rounded-xl transition-all transform hover:-translate-y-0.5 hover:shadow-lg"
+                            >
+                              {/* Gradient Background */}
+                              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/90 to-pink-600/90 group-hover:from-purple-600 group-hover:to-pink-600 transition-all duration-300"></div>
+
+                              {/* Content */}
+                              <div className="relative z-10 p-4 flex items-center">
+                                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                  <Link2 className="w-5 h-5 text-white" />
+                                </div>
+                                <div className="ml-3 flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-white truncate">{link.title}</p>
+                                  <p className="text-xs text-white/90 truncate">{domain}</p>
+                                </div>
+                                <div className="ml-2 text-white/70 group-hover:text-white transition-colors">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                    <polyline points="15 3 21 3 21 9"></polyline>
+                                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                                  </svg>
+                                </div>
+                              </div>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 px-4 text-sm text-gray-400 border-2 border-dashed border-white/10 rounded-xl">
+                        <p>No links added yet</p>
+                        <p className="text-xs mt-1 text-gray-500">This user hasn't shared any links</p>
+
+                        {/* Debug info for empty state */}
+                        <div className="mt-2 p-2 bg-red-500/20 rounded text-xs text-red-300">
+                          DEBUG: No links found for user {user?.id}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+              {/* Tags Section */}
+              <div className="px-6 space-y-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-white">
                     Content ({userContent?.length || 0})
@@ -460,13 +734,6 @@ export function UserProfileModal({ isOpen, onClose, user }: UserProfileModalProp
                 )}
               </div>
             </div>
-        {/* Main Content */}
-        <div className="h-full overflow-y-auto pb-20">
-          {/* User Info Section */}
-          <div className="relative">
-            {/* User content goes here */}
-          </div>
-        </div>
       </motion.div>
 
       {/* Content Lightbox */}

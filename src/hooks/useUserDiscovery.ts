@@ -57,6 +57,8 @@ interface DatabaseProfile {
   avatar_path: string | null
   cover_url: string | null
   cover_path: string | null
+  banner_url: string | null
+  banner_path: string | null
   is_verified: boolean
   created_at: string
   flagged: boolean
@@ -105,6 +107,7 @@ export interface DiscoverableUser {
   is_remote: boolean
   avatar_url: string | null
   cover_url: string | null
+  banner_url: string | null
   is_verified: boolean
   created_at: string
 }
@@ -229,13 +232,17 @@ export function useUserDiscovery() {
       const processedUsers = (data as DatabaseProfile[] || []).map(user => ({
         ...user,
         // Format avatar URL if it exists
-        avatar_url: user.avatar_path 
-          ? getPublicUrl(user.avatar_path, 'avatars') 
+        avatar_url: user.avatar_path
+          ? getPublicUrl(user.avatar_path, 'avatars')
           : user.avatar_url,
         // Format cover URL if it exists
-        cover_url: user.cover_path 
+        cover_url: user.cover_path
           ? getPublicUrl(user.cover_path, 'covers')
-          : user.cover_url
+          : user.cover_url,
+        // Format banner URL if it exists
+        banner_url: user.banner_path
+          ? getPublicUrl(user.banner_path, 'covers')
+          : user.banner_url
       }));
 
       setAllUsers(processedUsers);

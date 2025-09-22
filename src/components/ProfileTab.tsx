@@ -98,7 +98,7 @@ type LightboxContent = {
 };
 
 export function ProfileTab() {
-  const { profile, loading, error, uploadFile } = useProfile();
+  const { profile, loading, error, updateProfile } = useProfile();
   const { stats: followStats } = useFollows();
   const [showLinksModal, setShowLinksModal] = useState(false);
   const [userLinks, setUserLinks] = useState<UserLink[]>([]);
@@ -116,6 +116,7 @@ export function ProfileTab() {
   const [swiping, setSwiping] = useState(false);
   const [[x, y], setXY] = useState([0, 0]);
   const [uploading, setUploading] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   // Fetch user's projects
   const { projects: allProjects, loading: projectsLoading } = useProjects();
@@ -474,6 +475,79 @@ export function ProfileTab() {
     }
   };
 
+  const handleBannerUpload = async (file: File) => {
+    if (!user) return;
+    
+    setIsUploadingBanner(true);
+    
+    try {
+      // Check file type and size
+      const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+      
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        throw new Error('Only JPG, PNG, WebP, and GIF files are allowed');
+      }
+      
+      if (file.size > MAX_SIZE) {
+        throw new Error('File size must be less than 5MB');
+      }
+      
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-banner-${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+      
+      // Upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('banners')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+        
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL (don't use getPublicUrl for the URL to store in the database)
+      const { data: { publicUrl } } = supabase.storage
+        .from('banners')
+        .getPublicUrl(filePath);
+      
+      console.log('Banner uploaded to:', filePath);
+      console.log('Public URL:', publicUrl);
+      
+      // Update user profile with new banner URL
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
+          banner_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+        .select('*')
+        .single();
+        
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        throw updateError;
+      }
+      
+      // Update local state
+      if (updatedProfile) {
+        updateProfile(updatedProfile);
+        toast.success('Banner updated successfully!');
+      } else {
+        throw new Error('Failed to update profile with new banner URL');
+      }
+      
+    } catch (error) {
+      console.error('Error in handleBannerUpload:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to upload banner');
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4 pb-24">
@@ -557,8 +631,9 @@ export function ProfileTab() {
               website={profileState?.website}
               isCurrentUser={true}
               onEdit={() => setShowEditModal(true)}
-              onBannerChange={handleBannerChange}
+              onBannerChange={handleBannerUpload}
               onAvatarChange={handleAvatarChange}
+              isUploadingBanner={isUploadingBanner}
               className="w-full"
               fullScreen={true}
               stats={{

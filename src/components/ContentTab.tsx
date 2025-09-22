@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 import { Button } from './ui/Button';
-import { getInitials } from '../lib/utils';
+import { getInitials, processUserUrls } from '../lib/utils';
 import { useAuth } from '../hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUserContent, type UserContent } from '../hooks/useUserContent';
@@ -88,8 +88,29 @@ const ContentTab = ({ userId, onContentCreated, className = '' }: ContentTabProp
     fetchLikeStatus();
   }, [content, user?.id]);
 
-  const handleProfileClick = (user: any) => {
-    setSelectedUser(user);
+  const handleProfileClick = async (user: any) => {
+    // If user is just an ID, fetch the full user data
+    if (typeof user === 'object' && user.id && Object.keys(user).length === 1) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+
+        // Process URLs before setting the user
+        setSelectedUser(processUserUrls(data));
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
+    } else {
+      // Process URLs for the provided user object
+      setSelectedUser(processUserUrls(user));
+    }
+
     setShowProfileModal(true);
   };
 
